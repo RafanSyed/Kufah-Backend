@@ -1,0 +1,24 @@
+{
+  "development": {
+    "username": "kufah_admin",
+    "password": "password",
+    "database": "kufah_attendance",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "test": {
+    "username": "kufah_admin",
+    "password": "password",
+    "database": "kufah_attendance",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "kufah_admin",
+    "password": "password",
+    "database": "kufah_attendance",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  }
+}
+
