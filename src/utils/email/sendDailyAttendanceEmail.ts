@@ -6,7 +6,7 @@ import axios, { AxiosInstance } from "axios";
 
 // ---------- ApiService ----------
 const apiService: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  baseURL: process.env.API_URL || "http://localhost:5000",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -82,7 +82,7 @@ export const sendDailyAttendanceEmails = async () => {
 
     console.log(`⏰ Checking for upcoming classes to send attendance emails for ${day}...`);
 
-    const studentsByDay: StudentByDay[] = await ApiService.get(`/send-email/students-by-day/${day}`);
+    const studentsByDay: StudentByDay[] = await ApiService.get(`/api/send-email/students-by-day/${day}`);
 
     if (!studentsByDay?.length) {
       console.warn("⚠️ No students/classes found for today.");
@@ -93,7 +93,7 @@ export const sendDailyAttendanceEmails = async () => {
       const { studentId, classes } = entry;
 
       // 2️⃣ Get full student info
-      const studentDataResponse = await ApiService.get(`/students/${studentId}`);
+      const studentDataResponse = await ApiService.get(`/api/students/${studentId}`);
       const studentData: StudentData = studentDataResponse?.data;
       if (!studentData?.id || !studentData.firstName || !studentData.email) {
         console.warn(`⚠️ Student not found or invalid data for ID ${studentId}`, studentData);
