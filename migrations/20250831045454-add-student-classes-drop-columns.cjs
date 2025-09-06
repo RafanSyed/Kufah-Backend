@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('studentClasses', {
+    await queryInterface.createTable('student_classes', {
       id: {
         type: Sequelize.INTEGER,
         autoIncrement: true,
@@ -43,7 +43,7 @@ module.exports = {
     });
 
     // Prevent duplicate student-class pairs
-    await queryInterface.addConstraint('studentClasses', {
+    await queryInterface.addConstraint('student_classes', {
       fields: ['studentId', 'classId'],
       type: 'unique',
       name: 'unique_student_class'
@@ -51,6 +51,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('studentClasses');
+    await queryInterface.dropTable('student_classes');
   },
 };
