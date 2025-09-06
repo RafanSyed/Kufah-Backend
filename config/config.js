@@ -21,7 +21,6 @@
 //     "dialect": "postgres"
 //   }
 // }
-
 require('dotenv').config();
 
 module.exports = {
@@ -32,11 +31,17 @@ module.exports = {
     host: process.env.DATABASE_HOST || "localhost",
     port: Number(process.env.DATABASE_PORT) || 5432,
     dialect: "postgres",
-    logging: false,
+    logging: false
   },
   production: {
-    url: process.env.DATABASE_URL,  // Use Render’s DATABASE_URL
+    url: process.env.DATABASE_URL, // Render DATABASE_URL
     dialect: "postgres",
-    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false // Render uses self-signed certs
+      }
+    },
+    logging: false
   }
 };
