@@ -1,24 +1,14 @@
 {
   "development": {
-    "username": "kufah_admin",
-    "password": "password",
-    "database": "kufah_attendance",
-    "host": "127.0.0.1",
+    "url": "postgres://kufah_admin:password@localhost:5432/kufah_attendance",
     "dialect": "postgres"
   },
   "test": {
-    "username": "kufah_admin",
-    "password": "password",
-    "database": "kufah_attendance",
-    "host": "127.0.0.1",
+    "url": "postgres://kufah_admin:password@localhost:5432/kufah_attendance",
     "dialect": "postgres"
   },
   "production": {
-    "username": "kufah_admin",
-    "password": "password",
-    "database": "kufah_attendance",
-    "host": "127.0.0.1",
+    "url": "process.env.DATABASE_URL",
     "dialect": "postgres"
   }
 }
-
