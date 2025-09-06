@@ -4,6 +4,9 @@ import crypto from "crypto";
 
 import axios, { AxiosInstance } from "axios";
 
+
+console.log("API_URL is", process.env.API_URL);
+
 // ---------- ApiService ----------
 const apiService: AxiosInstance = axios.create({
   baseURL: process.env.API_URL || "http://localhost:5000",
