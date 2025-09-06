@@ -15,7 +15,7 @@ const ORIGIN = process.env.ORIGIN || "http://localhost:3000";
 
 // Enable CORS (for development)
 app.use(cors({
-  origin: "http://localhost:3000" // allow only your frontend
+  origin: ORIGIN || "http://localhost:3000" // allow only your frontend
   // or use origin: "*" for testing everything
 }));
 
