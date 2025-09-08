@@ -118,7 +118,7 @@ export const sendDailyAttendanceEmails = async () => {
         console.log(`✅ Attendance already exists for ${studentData.firstName}`);
       } else {
         token = crypto.randomBytes(16).toString("hex");
-        emailLink = `${frontendUrl}/attendance?token=${token}`;
+        emailLink = `${frontendUrl}/pages/attendance?token=${token}`;
         console.log(`🆕 Creating attendance for ${studentData.firstName}`);
       }
 
