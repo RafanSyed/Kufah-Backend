@@ -2,6 +2,7 @@ import { addAttendance, getAttendanceForStudentByDate } from "../../models/atten
 import { sendAttendanceEmail } from "./sendAttendanceEmail";
 import crypto from "crypto";
 import axios, { AxiosInstance } from "axios";
+import { toZonedTime, format } from "date-fns-tz";
 
 const apiService: AxiosInstance = axios.create({
   baseURL: process.env.API_URL || "http://localhost:5000",
@@ -52,19 +53,18 @@ const parseTime = (timeString: string): { hours: number; minutes: number } => {
 
 export const sendDailyAttendanceEmails = async () => {
   try {
-    const now = new Date();
+    const timeZone = "America/New_York";
+    const utcNow = new Date();
+    const now = toZonedTime(utcNow, timeZone); // convert UTC → EST/EDT
 
-    // Log what the server thinks
-    console.log("🕒 Server now (raw):", now);
-    console.log("🕒 Server ISO:", now.toISOString());
-    console.log(
-      "🕒 Localized (en-US, EST):",
-      now.toLocaleString("en-US", { timeZone: "America/New_York" })
-    );
+    console.log("🕒 UTC Now:", utcNow.toISOString());
+    console.log("🕒 Florida Time:", format(now, "yyyy-MM-dd HH:mm:ss zzz", { timeZone }));
 
-    const day = now.toLocaleString("en-US", { weekday: "short" });
-    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    const day = format(now, "EEE", { timeZone }); // Sun, Mon, etc.
+    const timeStr = format(now, "hh:mm a", { timeZone }); // 10:44 PM etc.
 
+    console.log(`📅 Florida day: ${day}`);
+    console.log(`⌛ Florida time: ${timeStr}`);
     console.log(`📅 Server thinks today is: ${day}`);
     console.log(`⌛ Server thinks time is: ${timeStr}`);
 
