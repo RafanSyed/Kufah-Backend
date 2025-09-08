@@ -53,10 +53,26 @@ const parseTime = (timeString: string): { hours: number; minutes: number } => {
 export const sendDailyAttendanceEmails = async () => {
   try {
     const now = new Date();
+
+    // Log what the server thinks
+    console.log("🕒 Server now (raw):", now);
+    console.log("🕒 Server ISO:", now.toISOString());
+    console.log(
+      "🕒 Localized (en-US, EST):",
+      now.toLocaleString("en-US", { timeZone: "America/New_York" })
+    );
+
     const day = now.toLocaleString("en-US", { weekday: "short" });
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+    console.log(`📅 Server thinks today is: ${day}`);
+    console.log(`⌛ Server thinks time is: ${timeStr}`);
+
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
-    const studentsByDay: StudentByDay[] = await ApiService.get(`/api/send-email/students-by-day/${day}`);
+    const studentsByDay: StudentByDay[] = await ApiService.get(
+      `/api/send-email/students-by-day/${day}`
+    );
 
     if (!studentsByDay?.length) {
       console.log("⚠️ No students/classes found for today.");
@@ -70,6 +86,9 @@ export const sendDailyAttendanceEmails = async () => {
 
       if (!studentData?.id || !studentData.firstName || !studentData.email) continue;
       if (!classes?.length) continue;
+
+      console.log(`🎓 Processing student: ${studentData.firstName} (${studentData.email})`);
+      console.log("📚 Classes for today:", classes.map(c => `${c.name} at ${c.time}`));
 
       const sortedClasses = classes
         .filter((c): c is ClassInfo => !!c.time)
@@ -85,7 +104,6 @@ export const sendDailyAttendanceEmails = async () => {
 
       if (!sortedClasses.length) continue;
 
-      // 5️⃣ Generate or reuse token/email link
       let token: string;
       let emailLink: string;
       let emailSent = false;
@@ -97,16 +115,21 @@ export const sendDailyAttendanceEmails = async () => {
         token = firstAttendance.token;
         emailLink = firstAttendance.email_link ?? "";
         emailSent = true;
+        console.log(`✅ Attendance already exists for ${studentData.firstName}`);
       } else {
         token = crypto.randomBytes(16).toString("hex");
         emailLink = `${frontendUrl}/attendance?token=${token}`;
+        console.log(`🆕 Creating attendance for ${studentData.firstName}`);
       }
 
-      // 6️⃣ Add attendance rows if they don't exist
       for (const classInfo of sortedClasses) {
         const classAttendance = await getAttendanceForStudentByDate(studentData.id, now, classInfo.id);
-        if (classAttendance.length > 0) continue;
+        if (classAttendance.length > 0) {
+          console.log(`⏭️ Already has attendance for class ${classInfo.name}`);
+          continue;
+        }
 
+        console.log(`➕ Adding attendance for ${classInfo.name} at ${classInfo.time}`);
         await addAttendance({
           date: now,
           status: "Absent",
@@ -120,7 +143,6 @@ export const sendDailyAttendanceEmails = async () => {
         });
       }
 
-      // 7️⃣ Send email once
       if (!emailSent) {
         await sendAttendanceEmail(studentData.email, studentData.firstName, token);
         console.log(`📧 Sent attendance email to ${studentData.firstName}`);
