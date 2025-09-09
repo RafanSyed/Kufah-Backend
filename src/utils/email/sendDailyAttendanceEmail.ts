@@ -57,16 +57,7 @@ export const sendDailyAttendanceEmails = async () => {
     const utcNow = new Date();
     const now = toZonedTime(utcNow, timeZone); // convert UTC → EST/EDT
 
-    console.log("🕒 UTC Now:", utcNow.toISOString());
-    console.log("🕒 Florida Time:", format(now, "yyyy-MM-dd HH:mm:ss zzz", { timeZone }));
-
     const day = format(now, "EEE", { timeZone }); // Sun, Mon, etc.
-    const timeStr = format(now, "hh:mm a", { timeZone }); // 10:44 PM etc.
-
-    console.log(`📅 Florida day: ${day}`);
-    console.log(`⌛ Florida time: ${timeStr}`);
-    console.log(`📅 Server thinks today is: ${day}`);
-    console.log(`⌛ Server thinks time is: ${timeStr}`);
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
@@ -81,39 +72,46 @@ export const sendDailyAttendanceEmails = async () => {
 
     for (const entry of studentsByDay) {
       const { studentId, classes } = entry;
+
       const studentDataResponse = await ApiService.get(`/api/students/${studentId}`);
-      const studentData: StudentData = studentDataResponse?.data;
+      const studentData: StudentData | undefined = studentDataResponse?.data;
 
       if (!studentData?.id || !studentData.firstName || !studentData.email) continue;
       if (!classes?.length) continue;
 
       console.log(`🎓 Processing student: ${studentData.firstName} (${studentData.email})`);
-      console.log("📚 Classes for today:", classes.map(c => `${c.name} at ${c.time}`));
 
-      const sortedClasses = classes
+      // Sort classes by time and get first class
+      const sortedClasses: ClassInfo[] = classes
         .filter((c): c is ClassInfo => !!c.time)
         .sort((a, b) => {
           const aTime = parseTime(a.time);
           const bTime = parseTime(b.time);
-          
-          const aMinutes = aTime.hours * 60 + aTime.minutes;
-          const bMinutes = bTime.hours * 60 + bTime.minutes;
-          
-          return aMinutes - bMinutes;
+          return aTime.hours * 60 + aTime.minutes - (bTime.hours * 60 + bTime.minutes);
         });
 
-      if (!sortedClasses.length) continue;
+      const firstClass: ClassInfo | undefined = sortedClasses[0];
+      if (!firstClass) continue;
 
+      const firstClassTime = parseTime(firstClass.time);
+      const scheduledDate = new Date(now);
+      scheduledDate.setHours(firstClassTime.hours, firstClassTime.minutes, 0, 0);
+
+      // Skip if current time is before scheduled class time
+      if (now < scheduledDate) {
+        console.log(`⏳ Waiting to send email for ${studentData.firstName}, first class at ${firstClass.time}`);
+        continue;
+      }
+
+      // Check existing attendance
+      const existingAttendance = (await getAttendanceForStudentByDate(studentData.id, now)) || [];
       let token: string;
       let emailLink: string;
       let emailSent = false;
 
-      const existingAttendance = await getAttendanceForStudentByDate(studentData.id, now);
-      const firstAttendance = existingAttendance[0];
-
-      if (firstAttendance) {
-        token = firstAttendance.token;
-        emailLink = firstAttendance.email_link ?? "";
+      if (existingAttendance.length > 0) {
+        token = existingAttendance[0]?.token ?? crypto.randomBytes(16).toString("hex");
+        emailLink = existingAttendance[0]?.email_link ?? "";
         emailSent = true;
         console.log(`✅ Attendance already exists for ${studentData.firstName}`);
       } else {
@@ -122,8 +120,9 @@ export const sendDailyAttendanceEmails = async () => {
         console.log(`🆕 Creating attendance for ${studentData.firstName}`);
       }
 
+      // Add attendance records for each class today
       for (const classInfo of sortedClasses) {
-        const classAttendance = await getAttendanceForStudentByDate(studentData.id, now, classInfo.id);
+        const classAttendance = (await getAttendanceForStudentByDate(studentData.id, now, classInfo.id)) || [];
         if (classAttendance.length > 0) {
           console.log(`⏭️ Already has attendance for class ${classInfo.name}`);
           continue;
@@ -143,6 +142,7 @@ export const sendDailyAttendanceEmails = async () => {
         });
       }
 
+      // Send email if not sent
       if (!emailSent) {
         await sendAttendanceEmail(studentData.email, studentData.firstName, token);
         console.log(`📧 Sent attendance email to ${studentData.firstName}`);
