@@ -1,6 +1,6 @@
 import StudentClassModel from "./models";
 import { populateStudentClass, StudentClass } from "./aggregations";
-import { StudentClassRequest } from "./types";
+import { StudentClassRequest, BulkStudentClassRequest } from "./types";
 
 export const addStudentToClass = async (
   data: StudentClassRequest
@@ -9,6 +9,26 @@ export const addStudentToClass = async (
   return populateStudentClass(response.get({ plain: true }));
 };
 
+export const addStudentsToClass = async (
+  data: BulkStudentClassRequest
+): Promise<StudentClass[]> => {
+  const { studentIds, classId } = data;
+
+  // Create a record for each student
+  const createdRecords = await Promise.all(
+    studentIds.map(studentId =>
+      StudentClassModel.create({
+        studentId,
+        classId,
+      } as any)
+    )
+  );
+
+  // Return populated plain objects
+  return createdRecords.map(record =>
+    populateStudentClass(record.get({ plain: true }))
+  );
+};
 
 export const removeStudentFromClass = async (id: number): Promise<void> => {
   const sc: StudentClassModel | null = await StudentClassModel.findByPk(id);

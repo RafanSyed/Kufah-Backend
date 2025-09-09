@@ -5,8 +5,9 @@ import {
   removeStudentFromClass,
   fetchStudentsInClass,
   fetchClassesForStudent,
+  addStudentsToClass
 } from "../../../models/studentClasses/functions";
-import { StudentClassRequest } from "../../../models/studentClasses/types";
+import { StudentClassRequest, BulkStudentClassRequest } from "../../../models/studentClasses/types";
 
 const router = Router();
 
@@ -50,6 +51,15 @@ router.delete("/:id", async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     await removeStudentFromClass(id);
     res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/bulk", async (req: Request<{}, {}, BulkStudentClassRequest>, res: Response) => {
+  try {
+    const studentClasses = await addStudentsToClass(req.body);
+    res.status(201).json(studentClasses);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
