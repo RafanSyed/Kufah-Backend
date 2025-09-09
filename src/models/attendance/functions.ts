@@ -156,3 +156,18 @@ export const getAttendanceForStudentByDate = async (
   const records = await AttendanceModel.findAll({ where: whereClause });
   return records.map(r => populateAttendance(r.get({ plain: true })));
 };
+
+export const getAttendancesByLink = async (token: string): Promise<Attendance[]> => {
+  if (!token) return [];
+
+  // Find all attendance rows where email_link contains this token
+  const records = await AttendanceModel.findAll({
+    where: {
+      email_link: {
+        [Op.like]: `%${token}%`, // match any email_link that contains this token
+      },
+    },
+  });
+
+  return records.map(r => populateAttendance(r.get({ plain: true })));
+};

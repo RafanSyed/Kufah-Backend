@@ -25,11 +25,11 @@ require('dotenv').config();
 
 module.exports = {
   development: {
-    database: process.env.DATABASE_NAME || "kufah_attendance",
-    username: process.env.DATABASE_USER || "kufah_admin",
-    password: process.env.DATABASE_PASSWORD || "password",
-    host: process.env.DATABASE_HOST || "localhost",
-    port: Number(process.env.DATABASE_PORT) || 5432,
+    database: process.env.DB_NAME || "kufah_attendance",
+    username: process.env.DB_USER || "kufah_admin",
+    password: process.env.DB_PASSWORD || "password",
+    host: process.env.DB_HOST || "localhost",
+    port: Number(process.env.DB_PORT) || 5432,
     dialect: "postgres",
     logging: false
   },

@@ -8,7 +8,8 @@ import {
   fetchAttendanceByDate,
   fetchAttendanceByStudentAndClass,
   markAttendanceByToken,
-  fetchAttendanceByToken
+  fetchAttendanceByToken,
+  getAttendancesByLink,
 } from "../../../models/attendance/functions";
 import { AttendanceRequest } from "../../../models/attendance/types";
 import AttendanceModel from "../../../models/attendance/models";
@@ -186,6 +187,27 @@ router.get("/link/:tokenPart", async (req: Request<{ tokenPart: string }>, res: 
     });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+router.get("/email/:email_link", async (req: Request, res: Response) => {
+  try {
+    const { email_link } = req.params;
+
+    if (!email_link) {
+      return res.status(400).json({ message: "Missing email_link" });
+    }
+
+    const records = await getAttendancesByLink(email_link);
+
+    if (!records.length) {
+      return res.status(404).json({ message: "No attendance records found for this link" });
+    }
+
+    res.json({ records });
+  } catch (err) {
+    console.error("❌ Error fetching attendance by email_link:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
