@@ -11,6 +11,20 @@ export const createStudent = async (student: StudentRequest): Promise<Student> =
 };
 
 /**
+ * Create multiple students at once
+ */
+export const createMultipleStudents = async (students: StudentRequest[]): Promise<Student[]> => {
+  // Insert all students in one go
+  const createdStudents: StudentModel[] = await StudentModel.bulkCreate(
+    students as any[],
+    { validate: true } // ensures each row respects model validation
+  );
+
+  // Return them as your Student type
+  return createdStudents.map((s) => populateStudentClass(s.get({ plain: true })));
+};
+
+/**
  * Fetch a single student by query (e.g., id or email)
  */
 export const fetchStudentByQuery = async (query: Partial<StudentRequest>): Promise<Student> => {

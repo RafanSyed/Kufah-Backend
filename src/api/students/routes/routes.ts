@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { 
   createStudent, 
+  createMultipleStudents,   // 👈 import your new function
   fetchStudentByQuery, 
   fetchAllStudents, 
   updateStudent, 
@@ -186,6 +187,39 @@ router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
       error: error.message
     });
   }
+});
+
+/**
+ * POST /api/students/bulk
+ * Create multiple students at once
+ */
+router.post("/bulk", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const students: StudentRequest[] = req.body.students;
+
+    if (!Array.isArray(students) || students.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: "Request body must include a non-empty 'students' array"
+      });
+      return;
+    }
+    console.log("Parsed students:", students);
+    const createdStudents = await createMultipleStudents(students);
+
+    res.status(201).json({
+      success: true,
+      data: createdStudents,
+      message: `${createdStudents.length} students created successfully`
+    });
+  } catch (error: any) {
+    console.error("Bulk student creation error:", error);
+    res.status(400).json({
+      success: false,
+      error: error.message || JSON.stringify(error)
+    });
+  }
+
 });
 
 export default router;
