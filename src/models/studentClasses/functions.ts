@@ -53,3 +53,46 @@ export const fetchClassesForStudent = async (
   });
   return records.map((r) => populateStudentClass(r.get({ plain: true })));
 };
+
+export const addClassesToStudent = async (
+  studentId: number,
+  classIds: number[]
+): Promise<StudentClass[]> => {
+  // Create a record for each class
+  const createdRecords = await Promise.all(
+    classIds.map(classId =>
+      StudentClassModel.create({
+        studentId,
+        classId,
+      } as any)
+    )
+  );
+
+  // Return populated plain objects
+  return createdRecords.map(record =>
+    populateStudentClass(record.get({ plain: true }))
+  );
+};
+
+export const updateClassesForStudent = async (
+  studentId: number,
+  classIds: number[]
+): Promise<StudentClass[]> => {
+  // 1. Delete all current class assignments for this student
+  await StudentClassModel.destroy({ where: { studentId } });
+
+  // 2. Create new assignments
+  const createdRecords = await Promise.all(
+    classIds.map((classId) =>
+      StudentClassModel.create({
+        studentId,
+        classId,
+      } as any)
+    )
+  );
+
+  // 3. Return populated plain objects
+  return createdRecords.map((record) =>
+    populateStudentClass(record.get({ plain: true }))
+  );
+};

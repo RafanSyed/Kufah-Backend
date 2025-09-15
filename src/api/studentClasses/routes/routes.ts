@@ -5,7 +5,9 @@ import {
   removeStudentFromClass,
   fetchStudentsInClass,
   fetchClassesForStudent,
-  addStudentsToClass
+  addStudentsToClass,
+  addClassesToStudent,
+  updateClassesForStudent,
 } from "../../../models/studentClasses/functions";
 import { StudentClassRequest, BulkStudentClassRequest } from "../../../models/studentClasses/types";
 
@@ -60,6 +62,40 @@ router.post("/bulk", async (req: Request<{}, {}, BulkStudentClassRequest>, res: 
   try {
     const studentClasses = await addStudentsToClass(req.body);
     res.status(201).json(studentClasses);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/student/bulk", async (req: Request, res: Response) => {
+  try {
+    const { studentId, classIds } = req.body;
+
+    if (!studentId || !Array.isArray(classIds)) {
+      return res.status(400).json({ message: "studentId and classIds[] are required" });
+    }
+
+    const studentClasses = await addClassesToStudent(studentId, classIds);
+    res.status(201).json(studentClasses);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// PUT: replace all classes for a student
+router.put("/student/:studentId", async (req: Request, res: Response) => {
+  try {
+    const studentId = Number(req.params.studentId);
+    const { classIds } = req.body;
+
+    if (!studentId || !Array.isArray(classIds)) {
+      return res
+        .status(400)
+        .json({ message: "studentId and classIds[] are required" });
+    }
+
+    const updatedClasses = await updateClassesForStudent(studentId, classIds);
+    res.status(200).json(updatedClasses);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
