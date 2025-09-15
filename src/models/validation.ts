@@ -46,15 +46,11 @@ export const validateStudentInClass = async (studentId: number, classId: number)
  */
 
 /** Validate email format */
+/** Validate email format */
 export const validateStudentEmail = async (email: string): Promise<boolean> => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) throw new Error(`Invalid email format: ${email}`);
-  
-  // Optional: check uniqueness
-  const existing = await StudentModel.findOne({ where: { email } });
-  if (existing) throw new Error(`Email already in use: ${email}`);
-  
-  return true;
+  return true; // <-- stop checking for uniqueness
 };
 
 /** Validate phone number format (basic) */

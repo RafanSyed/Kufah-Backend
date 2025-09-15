@@ -25,7 +25,6 @@ StudentModel.init(
     email: {
       type: DataType.STRING,
       allowNull: false,
-      unique: true,
       validate: {
         async isValidEmail(value: string) {
           await validateStudentEmail(value);
