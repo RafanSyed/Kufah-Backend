@@ -4,6 +4,9 @@ import crypto from "crypto";
 import axios, { AxiosInstance } from "axios";
 import { toZonedTime, format } from "date-fns-tz";
 
+// 🆕 throttle helper
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 const apiService: AxiosInstance = axios.create({
   baseURL: process.env.API_URL || "http://localhost:5000",
   headers: { "Content-Type": "application/json" },
@@ -105,14 +108,16 @@ export const sendDailyAttendanceEmails = async () => {
 
       // Check existing attendance
       const existingAttendance = (await getAttendanceForStudentByDate(studentData.id, now)) || [];
+
+      // 🆕 check if an email has already been sent
+      const hasEmailBeenSent = existingAttendance.some(a => a.email_sent === true);
+
       let token: string;
       let emailLink: string;
-      let emailSent = false;
 
       if (existingAttendance.length > 0) {
         token = existingAttendance[0]?.token ?? crypto.randomBytes(16).toString("hex");
-        emailLink = existingAttendance[0]?.email_link ?? "";
-        emailSent = true;
+        emailLink = existingAttendance[0]?.email_link ?? `${frontendUrl}/pages/attendance?token=${token}`;
         console.log(`✅ Attendance already exists for ${studentData.firstName}`);
       } else {
         token = crypto.randomBytes(16).toString("hex");
@@ -139,13 +144,30 @@ export const sendDailyAttendanceEmails = async () => {
           created_at: now,
           updated_at: now,
           email_link: emailLink,
+          email_sent: false, // 🆕
         });
       }
 
-      // Send email if not sent
-      if (!emailSent) {
-        await sendAttendanceEmail(studentData.email, studentData.firstName, token);
-        console.log(`📧 Sent attendance email to ${studentData.firstName}`);
+      // 🆕 send only if not already sent
+      if (!hasEmailBeenSent) {
+        try {
+          await sendAttendanceEmail(studentData.email, studentData.firstName, token);
+          console.log(`📧 Sent attendance email to ${studentData.firstName}`);
+
+          // 🆕 mark all rows for this student & date as emailed
+          await ApiService.put(`/api/attendance/${studentData.id}/mark-emailed`, {
+            date: now,  // backend will convert this to start/end of day
+          });
+          console.log(`✅ Marked attendance as emailed for ${studentData.firstName}`);
+
+          // 🆕 throttle: wait 1 sec before next email
+          console.log("⏳ Waiting 1 second before sending next email...");
+          await sleep(1000);
+          console.log("✅ Done waiting, moving to next student.");
+
+        } catch (err) {
+          console.error(`❌ Failed to send email for ${studentData.firstName}`, err);
+        }
       }
     }
   } catch (err) {

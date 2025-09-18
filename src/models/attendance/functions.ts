@@ -53,6 +53,19 @@ export const fetchAttendanceByToken = async (token: string) => {
   return attendanceRows.map((row) => row.get({ plain: true }));
 };
 
+export const markAttendanceEmailSent = async (
+  student_id: number,
+  date: Date
+): Promise<void> => {
+  const start = new Date(date); start.setHours(0, 0, 0, 0);
+  const end = new Date(date); end.setHours(23, 59, 59, 999);
+
+  await AttendanceModel.update(
+    { email_sent: true, updated_at: new Date() },
+    { where: { student_id, date: { [Op.between]: [start, end] } } }
+  );
+};
+
 /**
  * Update attendance by ID
  */

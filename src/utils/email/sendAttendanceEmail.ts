@@ -14,17 +14,17 @@ export const sendAttendanceEmail = async (
       pass: process.env.SMTP_PASS,
     },
   });
-
+  const today = new Date();
   const attendanceLink = `${process.env.FRONTEND_URL}/pages/attendance?token=${token}`;
 
   const mailOptions = {
     from: `"Kufah" <${process.env.SMTP_USER}>`,
     to: studentEmail,
-    subject: "Mark your attendance",
-    html: `<p>Assalamualaikum ${studentName},</p>
-           <p>Please mark your attendance for your classes by clicking the link below:</p>
+    subject: `Mark your attendance for ${today.toLocaleDateString()}`,
+    html: `<p>As-salamu alaykum ${studentName},</p>
+           <p>Please mark your attendance for your classes for today by clicking the link below:</p>
            <a href="${attendanceLink}">${attendanceLink}</a>
-           <p>This link expires in 24 hours.</p>`,
+           <p>JazakAllahu Khairan,<br/>Kufah Team</p>`,
   };
 
   await transporter.sendMail(mailOptions);

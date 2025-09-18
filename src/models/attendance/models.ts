@@ -14,6 +14,7 @@ export interface AttendanceAttributes {
   student_id: number;
   class_id: number;
   email_link?: string;
+  email_sent?: boolean;  // now persisted in DB
 }
 
 // Sequelize model
@@ -28,6 +29,7 @@ class AttendanceModel extends Model<AttendanceAttributes> implements AttendanceA
   public student_id!: number;
   public class_id!: number;
   public email_link?: string;
+  public email_sent?: boolean; // DB field, not just virtual
 }
 
 AttendanceModel.init(
@@ -58,7 +60,12 @@ AttendanceModel.init(
       allowNull: false,
       validate: { async isValidClass(value: number) { await validateClass(value); } },
     },
-    email_link: { type: DataTypes.STRING, allowNull: true, unique: false },
+    email_link: { type: DataTypes.STRING, allowNull: true },
+    email_sent: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,          // allows legacy rows
+      defaultValue: false,      // new rows = not sent yet
+    },
   },
   {
     sequelize: CORE_DB,
@@ -83,7 +90,8 @@ export class Attendance {
     public updated_at: Date,
     public student_id: number,
     public class_id: number,
-    public email_link?: string
+    public email_link?: string,
+    public email_sent: boolean = false
   ) {}
 }
 
