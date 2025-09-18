@@ -10,6 +10,7 @@ import {
   markAttendanceByToken,
   fetchAttendanceByToken,
   getAttendancesByLink,
+  markAttendanceEmailSent,
 } from "../../../models/attendance/functions";
 import { AttendanceRequest } from "../../../models/attendance/types";
 import AttendanceModel from "../../../models/attendance/models";
@@ -141,6 +142,26 @@ router.put("/:id", async (req: Request<{ id: string }, {}, Partial<AttendanceReq
     res.json(record);
   } catch (err) {
     res.status(404).json({ message: (err as Error).message });
+  }
+});
+
+router.put("/:studentId/mark-emailed", async (
+  req: Request<{ studentId: string }, {}, { date: string }>,
+  res: Response
+) => {
+  const studentId = Number(req.params.studentId);
+  const { date } = req.body;
+
+  if (isNaN(studentId) || !date) {
+    return res.status(400).json({ message: "Valid studentId and date are required" });
+  }
+
+  try {
+    await markAttendanceEmailSent(studentId, new Date(date));
+    res.json({ message: `Marked attendance as emailed for student ${studentId} on ${date}` });
+  } catch (err) {
+    console.error("❌ Error marking attendance emailed:", err);
+    res.status(500).json({ message: "Failed to update attendance" });
   }
 });
 

@@ -36,8 +36,8 @@ const startServer = async () => {
   try {
     await CORE_DB.authenticate();
     console.log("Database connected");
-    await CORE_DB.sync({ alter: true });
-    console.log("Models synchronized");
+    // ❌ Removed sync({ alter: true }) to avoid auto schema changes
+    // All schema updates must now go through migrations
 
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);

@@ -8,4 +8,5 @@ export interface AttendanceRequest {
   created_at?: Date;
   updated_at?: Date;
   email_link?: string;
+  email_sent?: boolean;   // 🆕 optional, defaults to false
 }

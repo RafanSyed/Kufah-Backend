@@ -11,7 +11,8 @@ export const populateAttendance = (att: any): Attendance => {
     att.updated_at,
     att.student_id,
     att.class_id,
-    att.email_link
+    att.email_link,
+    att.email_sent
   );
 };
 export { Attendance };
