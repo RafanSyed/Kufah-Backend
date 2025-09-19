@@ -154,17 +154,19 @@ export const sendDailyAttendanceEmails = async () => {
           await sendAttendanceEmail(studentData.email, studentData.firstName, token);
           console.log(`📧 Sent attendance email to ${studentData.firstName}`);
 
-          // 🆕 mark all rows for this student & date as emailed
+          // Optimistic mark in memory
+          existingAttendance.forEach(a => (a.email_sent = true));
+
+          // 🆕 mark all rows for this student & date as emailed in DB
           await ApiService.put(`/api/attendance/${studentData.id}/mark-emailed`, {
             date: now,  // backend will convert this to start/end of day
           });
           console.log(`✅ Marked attendance as emailed for ${studentData.firstName}`);
 
-          // 🆕 throttle: wait 1 sec before next email
-          console.log("⏳ Waiting 1 second before sending next email...");
-          await sleep(1000);
+          // 🆕 safer throttle: wait 2 sec before next email
+          console.log("⏳ Waiting 2 seconds before sending next email...");
+          await sleep(2000);
           console.log("✅ Done waiting, moving to next student.");
-
         } catch (err) {
           console.error(`❌ Failed to send email for ${studentData.firstName}`, err);
         }

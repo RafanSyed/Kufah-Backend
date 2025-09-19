@@ -1,19 +1,10 @@
-import nodemailer from "nodemailer";
+import { transporter } from "./transporter";
 
 export const sendAttendanceEmail = async (
   studentEmail: string,
   studentName: string,
   token: string
 ) => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: Number(process.env.SMTP_PORT) === 465, // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
   const today = new Date();
   const attendanceLink = `${process.env.FRONTEND_URL}/pages/attendance?token=${token}`;
 

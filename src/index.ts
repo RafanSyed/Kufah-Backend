@@ -24,11 +24,20 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 // Run attendance job every minute, continuously
+let isJobRunning = false;
+
 const runAttendanceJob = async () => {
+  if (isJobRunning) {
+    console.log("⚠️ Skipping new job, previous run still active");
+    return;
+  }
+  isJobRunning = true;
   try {
     await sendDailyAttendanceEmails();
   } catch (err) {
     console.error("❌ Error in attendance job:", err);
+  } finally {
+    isJobRunning = false;
   }
 };
 
