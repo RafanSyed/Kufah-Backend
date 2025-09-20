@@ -1,9 +1,9 @@
 import { Router } from "express";
-import AttendanceModel from "../../../models/attendance/models"; // your Sequelize model
+import AttendanceModel, { Attendance } from "../../../models/attendance/models"; // your Sequelize model
 import { populateAttendance } from "../../../models/attendance/aggregations";
 import { fetchStudentByQuery } from "../../../models/students/functions";
 import { fetchClassesForStudent } from "../../../models/studentClasses/functions";
-import { addAttendance } from "../../../models/attendance/functions";
+import { addAttendance, fetchAttendanceByStudent } from "../../../models/attendance/functions";
 import { sendAttendanceEmail } from "../../../utils/email/sendAttendanceEmail";
 import { fetchAllClasses } from "../../../models/classes/functions";
 import { fetchStudentsInClass } from "../../../models/studentClasses/functions";
@@ -132,6 +132,78 @@ router.get("/students-by-day/:day", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/attendance/resend-email
+ * Body: { classIds: number[], dryRun?: boolean }
+ */
+router.post("/resend-email", async (req, res) => {
+  const { classIds, dryRun = false } = req.body;
+
+  if (!Array.isArray(classIds) || classIds.length === 0) {
+    return res.status(400).json({ message: "classIds[] is required" });
+  }
+
+  try {
+    const studentMap = new Map<number, Attendance>();
+
+    // 🔹 Collect latest attendance per student
+    for (const classId of classIds) {
+      const students = await fetchStudentsInClass(classId);
+
+      for (const s of students) {
+        const attendances = await fetchAttendanceByStudent(s.studentId);
+        if (!attendances.length) continue;
+
+        // Pick latest attendance row
+        const latest = attendances.reduce((latest, current) =>
+          new Date(current.date) > new Date(latest.date) ? current : latest
+        );
+
+        // Deduplicate: keep the newest per student
+        const existing = studentMap.get(s.studentId);
+        if (!existing || new Date(latest.date) > new Date(existing.date)) {
+          studentMap.set(s.studentId, latest);
+        }
+      }
+    }
+
+    const results: any[] = [];
+
+    // 🔹 Send emails once per student
+    for (const [studentId, attendance] of studentMap.entries()) {
+      try {
+        const student = await fetchStudentByQuery({ id: studentId });
+        if (!student.email || !attendance.email_link) {
+          results.push({ studentId, sent: false, error: "Missing email or attendance link" });
+          continue;
+        }
+
+        let token = "";
+        try {
+          token = new URL(attendance.email_link).searchParams.get("token") || "";
+        } catch {
+          results.push({ studentId, sent: false, error: "Invalid email_link format" });
+          continue;
+        }
+
+        if (dryRun) {
+          results.push({ studentId, email: student.email, token, willSend: true });
+        } else {
+          await sendAttendanceEmail(student.email, student.firstName, token);
+          results.push({ studentId, email: student.email, sent: true });
+        }
+      } catch (err: any) {
+        results.push({ studentId, sent: false, error: err.message });
+      }
+    }
+
+    res.json({ success: true, total: results.length, dryRun, results });
+  } catch (err: any) {
+    console.error("❌ Error in resend-email:", err);
+    res.status(500).json({ message: err.message });
   }
 });
 
