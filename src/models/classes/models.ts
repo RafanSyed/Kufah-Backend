@@ -29,7 +29,15 @@ ClassModel.init(
     days: {
       type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: false,
-    }
+    },
+    zoom_link: {
+      type: DataTypes.STRING,
+      allowNull: true, // optional
+    },
+    recordings_folder_link: {
+      type: DataTypes.STRING,
+      allowNull: true, // optional
+    },
   },
   {
     sequelize: CORE_DB,
@@ -45,13 +53,17 @@ export class Class {
     name: string,
     time: string,
     created_at: Date,
-    days: string[]
+    days: string[],
+    zoom_link?: string,
+    recordings_folder_link?: string
   ) {
     this.id = id;
     this.name = name;
     this.time = time;
     this.created_at = created_at;
     this.days = days;
+    this.zoom_link = zoom_link;
+    this.recordings_folder_link = recordings_folder_link;
   }
 
   public id: number;
@@ -59,9 +71,12 @@ export class Class {
   public time: string;
   public created_at: Date;
   public days: string[];
-
+  public zoom_link?: string | undefined;
+  public recordings_folder_link?: string | undefined;
+  
+  public getRecordingsFolderLink(): string | undefined { return this.recordings_folder_link; }
   public getDays(): string[] { return this.days; }
-
+  public getZoomLink(): string | undefined { return this.zoom_link; }
   public getId(): number { return this.id; }
   public getName(): string { return this.name; }
   public getTime(): string { return this.time; }
