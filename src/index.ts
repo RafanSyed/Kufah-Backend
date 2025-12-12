@@ -53,7 +53,7 @@ const startServer = async () => {
     });
 
     // Check every minute
-    cron.schedule("* * * * *", runAttendanceJob);
+    // cron.schedule("* * * * *", runAttendanceJob);
 
   } catch (error) {
     console.error("Unable to connect to the database:", error);
