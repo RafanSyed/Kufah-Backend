@@ -60,6 +60,27 @@ export const sendDailyAttendanceEmails = async () => {
     const utcNow = new Date();
     const now = toZonedTime(utcNow, timeZone); // convert UTC → EST/EDT
 
+    // ✅ NEW: compute YYYY-MM-DD in school timezone
+    const isoDate = format(now, "yyyy-MM-dd", { timeZone });
+
+    // ✅ NEW: check noSchool table (global "no school" / "cancel attendance today")
+    try {
+      const statusResp = await ApiService.get(`/api/noSchool/check/${isoDate}`);
+      // depending on your ApiService wrapper, it might be statusResp.data
+      const status = statusResp?.data ?? statusResp;
+
+      if (status?.blocked) {
+        console.log(
+          `🛑 No school on ${isoDate}${status.reason ? ` (${status.reason})` : ""}. Skipping attendance emails.`
+        );
+        return; // ✅ stop job for today
+      }
+    } catch (e) {
+      // If the check endpoint fails, I recommend NOT sending emails (safer).
+      console.error("❌ Failed noSchool check. Skipping attendance as a safety measure.", e);
+      return;
+    }
+
     const day = format(now, "EEE", { timeZone }); // Sun, Mon, etc.
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
