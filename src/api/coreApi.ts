@@ -6,6 +6,8 @@ import coreAttendance from "./attendance/coreAttendance";
 import coreEmail from "./send-email/coreEmail";
 import coreEvents from "./events/coreEvents";
 import coreQuestions from "./questions/coreQuestions";
+import coreNoSchool from "./noSchool/coreNoSchool";
+
 
 const router = Router();
 
@@ -17,6 +19,7 @@ router.use("/attendance", coreAttendance);
 router.use("/send-email", coreEmail);
 router.use("/events", coreEvents);
 router.use("/questions", coreQuestions)
+router.use("/noSchool", coreNoSchool);
 
 
 
