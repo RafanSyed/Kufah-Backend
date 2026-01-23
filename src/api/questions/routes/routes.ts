@@ -111,8 +111,7 @@ router.post("/", async (req: Request, res: Response) => {
       isPublic:
         typeof body.isPublic === "boolean" ? body.isPublic : true,
       // 👇 new field – default to false if not provided
-      published:
-        typeof body.published === "boolean" ? body.published : false,
+      published: true
     };
 
     const created = await createQuestion(payload);
