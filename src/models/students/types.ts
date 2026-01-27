@@ -4,7 +4,11 @@ export interface StudentRequest {
   lastName: string;
   email: string;
   phone?: string;
+  salawat_goal_daily?: number;
+  adhkar_goal_daily?: number;
+  istighfar_goal_daily?: number;
 }
+
 
 export interface Student extends StudentRequest {
   id: number;
@@ -13,5 +17,16 @@ export interface Student extends StudentRequest {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string; 
+  phone?: string;
+  salawat_goal_daily?: number;
+  adhkar_goal_daily?: number;
+  istighfar_goal_daily?: number; 
 }
+
+// students/types.ts
+
+export type StudentGoalsUpdate = {
+  salawat_goal_daily?: number;
+  adhkar_goal_daily?: number;
+  istighfar_goal_daily?: number;
+};

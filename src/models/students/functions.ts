@@ -1,6 +1,8 @@
 import StudentModel, { Student } from "./models";
 import { populateStudentClass } from "./aggregations";
 import { StudentRequest } from "./types";
+import { StudentGoalsUpdate } from "./types";
+
 
 /**
  * Create a new student
@@ -63,4 +65,68 @@ export const deleteStudent = async (id: number): Promise<void> => {
   if (!student) throw new Error(`Student with ID ${id} not found`);
 
   await student.destroy();
+};
+
+/**
+ * Fetch just the student's daily ibadah goals
+ */
+export const fetchStudentIbadahGoals = async (
+  id: number
+): Promise<{ salawat_goal_daily: number; adhkar_goal_daily: number; istighfar_goal_daily: number }> => {
+  const student: StudentModel | null = await StudentModel.findByPk(id, {
+    attributes: ["id", "salawat_goal_daily", "adhkar_goal_daily", "istighfar_goal_daily"],
+  });
+
+  if (!student) throw new Error(`Student with id ${id} not found`);
+
+  const plain: any = student.get({ plain: true });
+  return {
+    salawat_goal_daily: Number(plain.salawat_goal_daily ?? 0),
+    adhkar_goal_daily: Number(plain.adhkar_goal_daily ?? 0),
+    istighfar_goal_daily: Number(plain.istighfar_goal_daily ?? 0),
+  };
+};
+
+/**
+ * Update the student's daily ibadah goals (teacher/admin action)
+ * - Only updates fields provided
+ * - Clamps to >= 0
+ */
+export const updateStudentIbadahGoals = async (
+  id: number,
+  updates: StudentGoalsUpdate
+): Promise<Student> => {
+  const student: StudentModel | null = await StudentModel.findByPk(id);
+  if (!student) throw new Error(`Student with id ${id} not found`);
+
+  const patch: any = {};
+
+  const clamp = (n: unknown) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return undefined;
+    return Math.max(0, Math.floor(x));
+  };
+
+  if (updates.salawat_goal_daily !== undefined) {
+    patch.salawat_goal_daily = clamp(updates.salawat_goal_daily);
+  }
+  if (updates.adhkar_goal_daily !== undefined) {
+    patch.adhkar_goal_daily = clamp(updates.adhkar_goal_daily);
+  }
+  if (updates.istighfar_goal_daily !== undefined) {
+    patch.istighfar_goal_daily = clamp(updates.istighfar_goal_daily);
+  }
+
+  await student.update(patch);
+  return populateStudentClass(student.get({ plain: true }));
+};
+
+/**
+ * Convenience: set all 3 goals at once (overwrite)
+ */
+export const setStudentIbadahGoals = async (
+  id: number,
+  goals: { salawat_goal_daily: number; adhkar_goal_daily: number; istighfar_goal_daily: number }
+): Promise<Student> => {
+  return updateStudentIbadahGoals(id, goals);
 };

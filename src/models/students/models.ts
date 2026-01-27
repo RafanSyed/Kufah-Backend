@@ -39,7 +39,22 @@ StudentModel.init(
           validateStudentPhone(value);
         },
       },
-    }
+    },
+    salawat_goal_daily: {
+      type: DataType.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    adhkar_goal_daily: {
+      type: DataType.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    istighfar_goal_daily: {
+      type: DataType.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
   },
   {
     sequelize: CORE_DB,
@@ -56,6 +71,9 @@ export class Student {
   public lastName: string;
   public email: string;
   public phone: string | undefined;
+  public salawat_goal_daily: number;
+  public adhkar_goal_daily: number;
+  public istighfar_goal_daily: number;
 
   constructor(
     id: number,
@@ -63,14 +81,18 @@ export class Student {
     lastName: string,
     email: string,
     phone: string | undefined = undefined,
-    first_class_of_day: string | undefined = undefined,
-    takes_saturday_classes: boolean | undefined = false
+    salawat_goal_daily: number,
+    adhkar_goal_daily: number,
+    istighfar_goal_daily: number
   ) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
     this.email = email;
     this.phone = phone;
+    this.salawat_goal_daily = salawat_goal_daily;
+    this.adhkar_goal_daily = adhkar_goal_daily;
+    this.istighfar_goal_daily = istighfar_goal_daily;
   }
 
   public getId(): number {
@@ -93,6 +115,17 @@ export class Student {
     return this.phone;
   }
 
+  public getSalawatGoalDaily(): number {
+    return this.salawat_goal_daily;
+  }
+
+  public getAdhkarGoalDaily(): number {
+    return this.adhkar_goal_daily;
+  }
+
+  public getIstighfarGoalDaily(): number {
+    return this.istighfar_goal_daily;
+  }
 }
 
 export default StudentModel;

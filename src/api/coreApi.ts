@@ -7,6 +7,7 @@ import coreEmail from "./send-email/coreEmail";
 import coreEvents from "./events/coreEvents";
 import coreQuestions from "./questions/coreQuestions";
 import coreNoSchool from "./noSchool/coreNoSchool";
+import coreIbadah from "./ibadah/coreIbadah";
 
 
 const router = Router();
@@ -18,8 +19,9 @@ router.use("/student-classes", coreStudentClasses);
 router.use("/attendance", coreAttendance);
 router.use("/send-email", coreEmail);
 router.use("/events", coreEvents);
-router.use("/questions", coreQuestions)
+router.use("/questions", coreQuestions);
 router.use("/noSchool", coreNoSchool);
+router.use("/ibadah", coreIbadah);
 
 
 

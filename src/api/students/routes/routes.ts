@@ -5,11 +5,41 @@ import {
   fetchStudentByQuery, 
   fetchAllStudents, 
   updateStudent, 
-  deleteStudent 
+  deleteStudent,
+  updateStudentIbadahGoals 
 } from "../../../models/students/functions";
 import { StudentRequest, Student } from "../../../models/students/types";
 
 const router = Router();
+
+router.post("/:id/goals", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const idParam = req.params.id;
+    if (!idParam) {
+      res.status(400).json({ success: false, error: "Missing student ID" });
+      return;
+    }
+
+    const id = parseInt(idParam);
+    if (isNaN(id)) {
+      res.status(400).json({ success: false, error: "Invalid student ID" });
+      return;
+    }
+    const updated = await updateStudentIbadahGoals(id, req.body ?? {});
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+      message: "Goals updated successfully",
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || "Could not update goals",
+    });
+  }
+});
+
 
 /**
  * POST /api/students
@@ -219,7 +249,8 @@ router.post("/bulk", async (req: Request, res: Response): Promise<void> => {
       error: error.message || JSON.stringify(error)
     });
   }
-
+  
+  
 });
 
 export default router;
