@@ -8,6 +8,7 @@ import coreEvents from "./events/coreEvents";
 import coreQuestions from "./questions/coreQuestions";
 import coreNoSchool from "./noSchool/coreNoSchool";
 import coreIbadah from "./ibadah/coreIbadah";
+import coreClassOccurrence from "./classOccurrences/coreClassOccurrences";
 
 
 const router = Router();
@@ -22,7 +23,7 @@ router.use("/events", coreEvents);
 router.use("/questions", coreQuestions);
 router.use("/noSchool", coreNoSchool);
 router.use("/ibadah", coreIbadah);
-
+router.use("/class-occurrences", coreClassOccurrence);
 
 
 export default router;
