@@ -19,7 +19,7 @@ const router = Router();
 /**
  * IMPORTANT ROUTE ORDER NOTE:
  * Put specific/static routes BEFORE "/:id"
- * Also restrict :id to numbers so "/today" or "/due" never gets treated as an id.
+ * DO NOT use "/:id(\\d+)" style regex here (breaks with your path-to-regexp version)
  */
 
 // ------------------- GET all occurrences -------------------
@@ -36,7 +36,7 @@ router.get("/", async (_req: Request, res: Response) => {
 // GET /api/class-occurrences/date/2026-02-08
 router.get("/date/:date", async (req: Request, res: Response) => {
   try {
-    const dateParam = req.params.date; // string | undefined
+    const dateParam = req.params.date;
 
     if (!dateParam) {
       return res.status(400).json({ message: "date param is required" });
@@ -52,7 +52,6 @@ router.get("/date/:date", async (req: Request, res: Response) => {
     return res.status(500).json({ message: (err as Error).message });
   }
 });
-
 
 // ------------------- POST build today's occurrences (manual trigger) -------------------
 // POST /api/class-occurrences/build-today
@@ -88,7 +87,6 @@ router.post("/", async (req: Request<{}, {}, Partial<ClassOccurrenceRequest>>, r
   try {
     const body = req.body;
 
-    // Minimum validation
     if (!body.class_id) {
       return res.status(400).json({ message: "class_id is required" });
     }
@@ -116,9 +114,14 @@ router.post("/", async (req: Request<{}, {}, Partial<ClassOccurrenceRequest>>, r
 
 // ------------------- PATCH mark processed -------------------
 // PATCH /api/class-occurrences/123/mark-processed
-router.patch("/:id(\\d+)/mark-processed", async (req: Request, res: Response) => {
+router.patch("/:id/mark-processed", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
+
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
+    }
+
     const updated = await markOccurrenceProcessed(id);
     res.json(updated);
   } catch (err) {
@@ -127,9 +130,15 @@ router.patch("/:id(\\d+)/mark-processed", async (req: Request, res: Response) =>
 });
 
 // ------------------- GET by id -------------------
-router.get("/:id(\\d+)", async (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const row = await fetchClassOccurrenceById(Number(req.params.id));
+    const id = Number(req.params.id);
+
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
+    }
+
+    const row = await fetchClassOccurrenceById(id);
     res.json(row);
   } catch (err) {
     res.status(404).json({ message: (err as Error).message });
@@ -137,23 +146,31 @@ router.get("/:id(\\d+)", async (req: Request, res: Response) => {
 });
 
 // ------------------- PUT update -------------------
-router.put(
-  "/:id(\\d+)",
-  async (req: Request<{ id: string }, {}, Partial<ClassOccurrenceRequest>>, res: Response) => {
-    try {
-      const id = Number(req.params.id);
-      const updated = await updateClassOccurrence(id, req.body);
-      res.json(updated);
-    } catch (err) {
-      res.status(404).json({ message: (err as Error).message });
+router.put("/:id", async (req: Request<{ id: string }, {}, Partial<ClassOccurrenceRequest>>, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
     }
+
+    const updated = await updateClassOccurrence(id, req.body);
+    res.json(updated);
+  } catch (err) {
+    res.status(404).json({ message: (err as Error).message });
   }
-);
+});
 
 // ------------------- DELETE -------------------
-router.delete("/:id(\\d+)", async (req: Request, res: Response) => {
+router.delete("/:id", async (req: Request, res: Response) => {
   try {
-    await deleteClassOccurrence(Number(req.params.id));
+    const id = Number(req.params.id);
+
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
+    }
+
+    await deleteClassOccurrence(id);
     res.status(204).send();
   } catch (err) {
     res.status(404).json({ message: (err as Error).message });
