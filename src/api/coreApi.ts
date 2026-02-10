@@ -9,6 +9,7 @@ import coreQuestions from "./questions/coreQuestions";
 import coreNoSchool from "./noSchool/coreNoSchool";
 import coreIbadah from "./ibadah/coreIbadah";
 import coreClassOccurrence from "./classOccurrences/coreClassOccurrences";
+import coreStudentPushTokens from "./studentPushTokens/coreStudentPushTokens";
 
 
 const router = Router();
@@ -24,6 +25,7 @@ router.use("/questions", coreQuestions);
 router.use("/noSchool", coreNoSchool);
 router.use("/ibadah", coreIbadah);
 router.use("/class-occurrences", coreClassOccurrence);
+router.use("/push-tokens", coreStudentPushTokens);
 
 
 export default router;

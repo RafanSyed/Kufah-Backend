@@ -1,5 +1,5 @@
 // src/utils/attendance/occurrenceWorker.ts
-import crypto from "crypto";
+
 import { toZonedTime, format } from "date-fns-tz";
 
 import ClassOccurrenceModel from "../../models/classOccurrences/models";
@@ -11,6 +11,15 @@ import {
 
 import { addAttendance, getAttendanceForStudentByDate } from "../../models/attendance/functions";
 import { ApiService } from "./internalApi";
+
+// ✅ use YOUR push token functions
+import {
+  fetchActiveTokensForStudents,
+  deactivatePushToken,
+} from "../../models/studentPushTokens/functions";
+
+// ✅ your Expo push sender
+import { sendExpoPushToTokens } from "../push/expoPush";
 
 const timeZone = "America/New_York";
 
@@ -51,37 +60,27 @@ const ensureTodayOccurrencesExist = async (isoDate: string) => {
 };
 
 const fetchStudentsForClass = async (classId: number) => {
+  // join rows: [{ id, classId, studentId }, ...]
   const resp = await ApiService.get(`/api/student-classes/class/${classId}`);
-  const students = resp?.data ?? resp;
-  return students;
+  return resp?.data ?? resp;
 };
 
 const createAttendanceForOccurrence = async (opts: {
   classId: number;
   startsAt: Date;
   nowZoned: Date;
-  isoDate: string;
   students: any[];
 }) => {
   const { classId, startsAt, nowZoned, students } = opts;
 
-  // ⚠️ TEMP (email-era fields):
-  // You’re still generating token/link/email flags because your attendance schema currently expects them.
-  // Later, when you fully switch to push notifications, you can:
-  // - remove token/email_link/email_sent columns (or stop writing them)
-  // - change attendance marking to be by (student_id, class_id, date) instead of token
-  const token = crypto.randomBytes(16).toString("hex");
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const link = `${frontendUrl}/pages/attendance?token=${token}`;
-
   let createdCount = 0;
 
   for (const s of students) {
-    // student-classes endpoint returns join records, so student id is s.studentId (not s.id)
+    // join record -> studentId lives at s.studentId
     const studentId = Number(s?.studentId);
     if (!Number.isFinite(studentId)) continue;
 
-    // prevents duplicate rows if worker runs twice within the window
+    // prevents duplicates if worker re-runs inside window
     const existing = (await getAttendanceForStudentByDate(studentId, startsAt, classId)) || [];
     if (existing.length > 0) continue;
 
@@ -90,13 +89,6 @@ const createAttendanceForOccurrence = async (opts: {
       status: "Absent",
       student_id: studentId,
       class_id: classId,
-
-      // keep until you fully remove email flow columns
-      token,
-      token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      email_link: link,
-      email_sent: false,
-
       created_at: nowZoned,
       updated_at: nowZoned,
     } as any);
@@ -125,7 +117,7 @@ export const runOccurrenceWorker = async () => {
     // 2) ensure occurrences exist for today
     await ensureTodayOccurrencesExist(isoDate);
 
-    // 3) fetch due occurrences (classes whose starts_at is within the window and not processed)
+    // 3) fetch due occurrences
     const due = await fetchDueUnprocessedOccurrences(timeZone, DUE_WINDOW_MINUTES);
     if (!due.length) return;
 
@@ -140,7 +132,7 @@ export const runOccurrenceWorker = async () => {
         `➡️ Processing occurrence=${occurrenceId} class_id=${classId} starts_at=${startsAt.toISOString()}`
       );
 
-      // 4) fetch student list (join rows) for that class
+      // 4) fetch join rows for that class
       const students = await fetchStudentsForClass(classId);
 
       if (!Array.isArray(students) || students.length === 0) {
@@ -149,59 +141,62 @@ export const runOccurrenceWorker = async () => {
         continue;
       }
 
-      // 5) create attendance rows (one per student for this class occurrence)
+      // 5) create attendance rows
       const createdCount = await createAttendanceForOccurrence({
         classId,
         startsAt,
         nowZoned,
-        isoDate,
         students,
       });
 
       console.log(`✅ Created ${createdCount} attendance row(s) for class_id=${classId}`);
 
       // ============================================================
-      // 🔔 PUSH NOTIFICATIONS WORK STARTS HERE (NEXT STEP)
+      // 🔔 PUSH NOTIFICATIONS (Expo)
       //
-      // Goal: send ONE push notification per student per class occurrence,
-      // at the time of the class (which is why we're inside the "due occurrence" loop).
-      //
-      // What you will implement here:
-      //
-      // (A) You need each student to have a saved Expo push token.
-      //     - When the student logs into the Expo app, the app asks permission,
-      //       gets expoPushToken, and sends it to your backend.
-      //     - Backend stores token in DB (recommended: a StudentPushTokens table
-      //       that supports multiple devices per student).
-      //
-      // (B) Fetch push tokens for the students in THIS class:
-      //     - Either:
-      //         1) call an endpoint like GET /api/push-tokens/student/:studentId
-      //         2) or join in DB directly in a helper function
-      //
-      // (C) Send notifications:
-      //     - Use Expo push API (https://exp.host/--/api/v2/push/send)
-      //     - Batch in chunks (Expo limit ~100 messages per request)
-      //     - Handle invalid tokens (DeviceNotRegistered) and delete them
-      //
-      // (D) Optional but recommended: record "notification_sent_at"
-      //     - Either in class_occurrences (e.g. notified_at) or a separate table
-      //       like class_occurrence_notifications to avoid double-sending.
-      //
-      // Pseudocode (you'll implement soon):
-      //
-      //   const studentIds = students.map(s => Number(s.studentId)).filter(Number.isFinite);
-      //   const tokens = await fetchPushTokensForStudents(studentIds);
-      //   await sendPushBatch(tokens, {
-      //     title: "Time to mark attendance",
-      //     body: `Your class is starting now.`,
-      //     data: { classId, occurrenceId, startsAt: startsAt.toISOString() }
-      //   });
-      //
-      // For now, you're mimicking with emails — this is the exact slot you'll swap out.
+      // One notification per student per class occurrence.
+      // We will send data so app can route to:
+      // /(tabs)/student/class/[id].tsx  (classId)
       // ============================================================
 
-      // 6) mark occurrence processed so we don't create attendance / notify again
+      const studentIds = students
+        .map((s: any) => Number(s?.studentId))
+        .filter((n: number) => Number.isFinite(n));
+
+      const tokenRows = await fetchActiveTokensForStudents(studentIds);
+      const pushTokens = tokenRows
+        .map((t: any) => t?.push_token) // StudentPushToken class property
+        .filter((t: any) => typeof t === "string" && t.length > 0);
+
+      if (!pushTokens.length) {
+        console.log(`⚠️ No active push tokens for class_id=${classId}. Skipping push.`);
+      } else {
+        // Your expoPush.ts should already chunk + call Expo.
+        // The "data" is what you'll read on notification tap in the app.
+        const result = await sendExpoPushToTokens({
+          tokens: pushTokens,
+          title: "Complete your attendance",
+          body: "Tap to open your class attendance.",
+          data: {
+            classId,
+            occurrenceId,
+            startsAt: startsAt.toISOString(),
+          },
+        });
+
+        // OPTIONAL: if your sendExpoPushToTokens returns invalid tokens, deactivate them
+        // (If your function does NOT return invalid tokens, you can remove this block.)
+        if (result?.invalidTokens?.length) {
+          for (const badToken of result.invalidTokens) {
+            await deactivatePushToken(badToken);
+          }
+          console.log(`🧹 Deactivated ${result.invalidTokens.length} invalid token(s)`);
+        }
+
+        console.log(`✅ Sent push to ${pushTokens.length} device(s) for class_id=${classId}`);
+      }
+
+      // 6) mark occurrence processed so we don't notify again
       await markOccurrenceProcessed(occurrenceId);
       console.log(`✅ Marked occurrence ${occurrenceId} processed`);
 
