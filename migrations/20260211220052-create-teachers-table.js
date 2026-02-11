@@ -24,10 +24,6 @@ module.exports = {
         allowNull: false,
         unique: true,
       },
-      phone: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
     });
   },
 
