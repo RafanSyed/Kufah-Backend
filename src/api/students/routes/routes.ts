@@ -81,7 +81,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
   try {
     const query = req.query as Partial<StudentRequest>;
     const students = await fetchAllStudents(query);
-    console.log("Fetched students:", students);
+    // console.log("Fetched students:", students);
     res.status(200).json({
       success: true,
       data: students,
