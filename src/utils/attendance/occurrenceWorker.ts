@@ -106,20 +106,29 @@ export const runOccurrenceWorker = async () => {
   }
 
   isWorkerRunning = true;
+  console.log("🟢 Occurrence worker tick");
 
   try {
     const { nowZoned, isoDate } = getIsoDateNow();
-
+    console.log("🕒 now:", nowZoned.toISOString(), "isoDate:", isoDate);
     // 1) noSchool check
     const blocked = await isNoSchoolToday(isoDate);
-    if (blocked) return;
+    console.log("🏫 noSchool blocked?", blocked);
+    if (blocked) {
+      console.log("🛑 Skipping occurrence worker run due to noSchool block");
+      return;
+    }
 
     // 2) ensure occurrences exist for today
     await ensureTodayOccurrencesExist(isoDate);
 
     // 3) fetch due occurrences
     const due = await fetchDueUnprocessedOccurrences(timeZone, DUE_WINDOW_MINUTES);
-    if (!due.length) return;
+    console.log("📦 due occurrences:", due.length);
+    if (!due.length){
+      console.log("🟡 No due occurrences; exiting"); 
+      return;
+    };
 
     console.log(`⏰ Due occurrences: ${due.length}`);
 
