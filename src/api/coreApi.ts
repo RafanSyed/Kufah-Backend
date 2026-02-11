@@ -11,6 +11,7 @@ import coreIbadah from "./ibadah/coreIbadah";
 import coreClassOccurrence from "./classOccurrences/coreClassOccurrences";
 import coreStudentPushTokens from "./studentPushTokens/coreStudentPushTokens";
 import coreTeachers from "./teachers/coreTeachers";
+import coreTeacherClasses from "./teacherClasses/coreTeacherClasses";
 
 
 const router = Router();
@@ -28,6 +29,7 @@ router.use("/ibadah", coreIbadah);
 router.use("/class-occurrences", coreClassOccurrence);
 router.use("/push-tokens", coreStudentPushTokens);
 router.use("/teachers", coreTeachers);
+router.use("/teacher-classes", coreTeacherClasses);
 
 
 export default router;
