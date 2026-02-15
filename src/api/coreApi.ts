@@ -12,6 +12,7 @@ import coreClassOccurrence from "./classOccurrences/coreClassOccurrences";
 import coreStudentPushTokens from "./studentPushTokens/coreStudentPushTokens";
 import coreTeachers from "./teachers/coreTeachers";
 import coreTeacherClasses from "./teacherClasses/coreTeacherClasses";
+import coreAnnoucements from "./annoucements/coreAnnoucements";
 
 
 const router = Router();
@@ -30,6 +31,7 @@ router.use("/class-occurrences", coreClassOccurrence);
 router.use("/push-tokens", coreStudentPushTokens);
 router.use("/teachers", coreTeachers);
 router.use("/teacher-classes", coreTeacherClasses);
+router.use("/announcements", coreAnnoucements);
 
 
 export default router;
