@@ -55,6 +55,11 @@ StudentModel.init(
       allowNull: true,
       defaultValue: 0,
     },
+    side: {
+      type: DataType.ENUM("brothers", "sisters"),
+      allowNull: true,
+      defaultValue: null,
+    }
   },
   {
     sequelize: CORE_DB,
@@ -74,6 +79,7 @@ export class Student {
   public salawat_goal_daily: number;
   public adhkar_goal_daily: number;
   public istighfar_goal_daily: number;
+  public side: "brothers" | "sisters" | null;
 
   constructor(
     id: number,
@@ -83,7 +89,8 @@ export class Student {
     phone: string | undefined = undefined,
     salawat_goal_daily: number,
     adhkar_goal_daily: number,
-    istighfar_goal_daily: number
+    istighfar_goal_daily: number,
+    side: "brothers" | "sisters" | null = null
   ) {
     this.id = id;
     this.firstName = firstName;
@@ -93,6 +100,7 @@ export class Student {
     this.salawat_goal_daily = salawat_goal_daily;
     this.adhkar_goal_daily = adhkar_goal_daily;
     this.istighfar_goal_daily = istighfar_goal_daily;
+    this.side = side;
   }
 
   public getId(): number {
@@ -125,6 +133,10 @@ export class Student {
 
   public getIstighfarGoalDaily(): number {
     return this.istighfar_goal_daily;
+  }
+
+  public getSide(): "brothers" | "sisters" | null {
+    return this.side;
   }
 }
 

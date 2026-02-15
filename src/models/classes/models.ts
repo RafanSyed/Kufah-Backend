@@ -38,6 +38,11 @@ ClassModel.init(
       type: DataTypes.STRING,
       allowNull: true, // optional
     },
+    type: {
+      type: DataTypes.ENUM("combined", "segregated"),
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     sequelize: CORE_DB,
@@ -55,7 +60,8 @@ export class Class {
     created_at: Date,
     days: string[],
     zoom_link?: string,
-    recordings_folder_link?: string
+    recordings_folder_link?: string,
+    type?: "combined" | "segregated" | null
   ) {
     this.id = id;
     this.name = name;
@@ -64,6 +70,7 @@ export class Class {
     this.days = days;
     this.zoom_link = zoom_link;
     this.recordings_folder_link = recordings_folder_link;
+    this.type = type ?? null;
   }
 
   public id: number;
@@ -73,6 +80,7 @@ export class Class {
   public days: string[];
   public zoom_link?: string | undefined;
   public recordings_folder_link?: string | undefined;
+  public type?: "combined" | "segregated" | null;
   
   public getRecordingsFolderLink(): string | undefined { return this.recordings_folder_link; }
   public getDays(): string[] { return this.days; }
@@ -81,6 +89,8 @@ export class Class {
   public getName(): string { return this.name; }
   public getTime(): string { return this.time; }
   public getCreatedAt(): Date { return this.created_at; }
+  public getType(): "combined" | "segregated" | null | undefined { return this.type; }
+
 }
 
 export default ClassModel;

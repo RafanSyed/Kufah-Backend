@@ -3,6 +3,87 @@ import IbadahDailyModel from "./models";
 import { IbadahDaily } from "./models";
 import { IbadahDailyRequest, IbadahTapRequest } from "./types";
 import { populateIbadahDaily } from "./aggregations";
+import { fetchStudentsInClass } from "../studentClasses/functions"; // <-- adjust path
+import { StudentModel } from "../associations";
+import { Op } from "sequelize/lib/operators";
+
+type ClassIbadahRow = {
+  student: {
+    id: number;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  };
+  ibadah: any | null; // replace 'any' with your IbadahDaily type if you want
+};
+
+export const fetchIbadahDailyForClassAndDay = async (
+  classId: number,
+  day: string
+): Promise<ClassIbadahRow[]> => {
+  // 1) get join rows (studentIds)
+  const joins = await fetchStudentsInClass(classId);
+  const studentIds = Array.from(
+    new Set(
+      joins
+        .map((r: any) => Number(r.studentId ?? r.student_id ?? r.student_id_fk))
+        .filter((n) => Number.isFinite(n))
+    )
+  );
+
+  if (studentIds.length === 0) return [];
+
+  // 2) fetch students in ONE query (include goals)
+  const students = await StudentModel.findAll({
+    where: { id: studentIds },
+    attributes: [
+      "id",
+      "firstName",
+      "lastName",
+      "email",
+      "salawat_goal_daily",
+      "adhkar_goal_daily",
+      "istighfar_goal_daily",
+    ], // adjust if snake_case differs in your model
+  });
+
+  // quick map
+  const studentById = new Map<number, any>();
+  for (const s of students) studentById.set(Number(s.get("id")), s.get({ plain: true }));
+
+  // 3) fetch ibadah rows for each student
+  const ibadahRows = await Promise.all(
+    studentIds.map(async (sid) => {
+      const ibadah = await fetchIbadahDailyByStudentAndDay(sid, day);
+      const student = studentById.get(sid) ?? { id: sid };
+
+      return {
+        student: {
+          id: sid,
+          firstName: student.firstName ?? null,
+          lastName: student.lastName ?? null,
+          email: student.email ?? null,
+
+          // ✅ include goals (default 0 if missing)
+          salawat_goal_daily: Number(student.salawat_goal_daily ?? 0),
+          adhkar_goal_daily: Number(student.adhkar_goal_daily ?? 0),
+          istighfar_goal_daily: Number(student.istighfar_goal_daily ?? 0),
+        },
+        ibadah: ibadah ?? null,
+      };
+    })
+  );
+
+  // optional: sort alphabetically
+  ibadahRows.sort((a, b) => {
+    const an = `${a.student.lastName ?? ""} ${a.student.firstName ?? ""}`.trim().toLowerCase();
+    const bn = `${b.student.lastName ?? ""} ${b.student.firstName ?? ""}`.trim().toLowerCase();
+    return an.localeCompare(bn);
+  });
+
+  return ibadahRows;
+};
+
 
 /**
  * Create a daily row (usually you won't call this directly; tap/upsert handles it)

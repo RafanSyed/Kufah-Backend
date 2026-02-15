@@ -7,6 +7,7 @@ export interface StudentRequest {
   salawat_goal_daily?: number;
   adhkar_goal_daily?: number;
   istighfar_goal_daily?: number;
+  side?: "brothers" | "sisters" | null;
 }
 
 
@@ -21,6 +22,7 @@ export interface Student extends StudentRequest {
   salawat_goal_daily?: number;
   adhkar_goal_daily?: number;
   istighfar_goal_daily?: number; 
+  side?: "brothers" | "sisters" | null;
 }
 
 // students/types.ts

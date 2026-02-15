@@ -47,6 +47,10 @@ QuestionsModel.init(
       type: DataType.BOOLEAN,
       allowNull: false,
       defaultValue: false
+    },
+    side: {
+      type: DataType.ENUM("brothers", "sisters"),
+      allowNull: false,
     }
   },
   {
@@ -65,7 +69,8 @@ export class Question {
   public isPublic: boolean; 
   public classId: number; 
   public studentId: number;
-  public published: boolean;  
+  public published: boolean;
+  public side?: "brothers" | "sisters";
 
   constructor(
     id: number,
@@ -74,7 +79,8 @@ export class Question {
     isPublic: boolean, 
     classId: number,
     studentId: number,
-    published: boolean
+    published: boolean,
+    side: "brothers" | "sisters"
   ) {
     this.id = id;
     this.question = question;
@@ -83,6 +89,7 @@ export class Question {
     this.classId = classId;
     this.studentId = studentId;
     this.published = published;
+    this.side = side;
   }
 
   public getId(): number {
@@ -103,6 +110,10 @@ export class Question {
 
   public getPublished(): boolean { 
     return this.published
+  }
+
+  public getSide(): "brothers" | "sisters" | undefined { 
+    return this.side
   }
 }
 
