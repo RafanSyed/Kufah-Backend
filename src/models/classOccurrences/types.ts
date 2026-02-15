@@ -6,4 +6,5 @@ export interface ClassOccurrenceRequest {
     processed_at: Date | null;
     created_at: Date;
     updated_at: Date;
+    cancelled_at: Date | null;
 }

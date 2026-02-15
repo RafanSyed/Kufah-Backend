@@ -1,15 +1,29 @@
 // src/backend/models/classOccurrences/functions.ts
 import { Op } from "sequelize";
 import { toZonedTime, format, fromZonedTime } from "date-fns-tz";
-
-import ClassOccurrenceModel from "./models";
-import { ClassOccurrence } from "./models";
+import ClassOccurrenceModel, { ClassOccurrence } from "./models";
 import { ClassOccurrenceRequest } from "./types";
 import { toPopulateClassOccurrence } from "./aggregations";
-
+import { removeAttendance, fetchAttendanceByClass, fetchAttendanceByDate } from "../attendance/functions";
 import ClassModel from "../classes/models";
 
 // ---------------- helpers ----------------
+
+/**
+ * Helper to get attendance for a specific class on a specific date
+ * Combines your existing fetchAttendanceByDate and filters by class_id
+ */
+const getAttendanceByClassAndDate = async (classId: number, date: Date): Promise<any[]> => {
+  // Get all attendance for this date
+  const allAttendanceOnDate = await fetchAttendanceByDate(date);
+  
+  // Filter by class_id
+  return allAttendanceOnDate.filter((att: any) => {
+    const attClassId = att.class_id || att.getClassId?.();
+    return Number(attClassId) === Number(classId);
+  });
+};
+
 const parseTime = (timeString: string): { hours: number; minutes: number; seconds: number } => {
   const parts = (timeString || "").split(":");
   const hours = parseInt(parts[0] || "0", 10) || 0;
@@ -19,21 +33,17 @@ const parseTime = (timeString: string): { hours: number; minutes: number; second
 };
 
 // ✅ Build the correct UTC Date for "dateISO + classTime" in the given timezone.
-// This is the critical fix.
 const buildStartsAtForDate = (dateISO: string, timeZone: string, classTime: string): Date => {
   const { hours, minutes, seconds } = parseTime(classTime);
-
-  // Build a "local wall-clock" datetime string, then convert to UTC.
-  // Example: "2026-02-10 15:30:00" in America/New_York -> correct UTC Date
   const hh = String(hours).padStart(2, "0");
   const mm = String(minutes).padStart(2, "0");
   const ss = String(seconds).padStart(2, "0");
-
-  const localDateTime = `${dateISO} ${hh}:${mm}:${ss}`; // NO "T", keep it a local datetime
+  const localDateTime = `${dateISO} ${hh}:${mm}:${ss}`;
   return fromZonedTime(localDateTime, timeZone);
 };
 
 // ---------------- basic CRUD ----------------
+
 export const createClassOccurrence = async (
   payload: Partial<ClassOccurrenceRequest> & {
     class_id: number;
@@ -46,10 +56,10 @@ export const createClassOccurrence = async (
     date: payload.date,
     starts_at: payload.starts_at,
     processed_at: payload.processed_at ?? null,
+    cancelled_at: payload.cancelled_at ?? null,
     created_at: payload.created_at ?? new Date(),
     updated_at: payload.updated_at ?? new Date(),
   } as any);
-
   return toPopulateClassOccurrence(created.get({ plain: true }));
 };
 
@@ -65,12 +75,10 @@ export const updateClassOccurrence = async (
 ): Promise<ClassOccurrence> => {
   const row = await ClassOccurrenceModel.findByPk(id);
   if (!row) throw new Error(`Class occurrence with id ${id} not found`);
-
   await row.update({
     ...updates,
-    updated_at: new Date(), // keep consistent with your style
+    updated_at: new Date(),
   });
-
   return toPopulateClassOccurrence(row.get({ plain: true }));
 };
 
@@ -104,12 +112,10 @@ export const fetchClassOccurrencesByDate = async (dateISO: string): Promise<Clas
 export const buildTodayClassOccurrences = async (
   timeZone = "America/New_York"
 ): Promise<ClassOccurrence[]> => {
-  // Use UTC "now" for the moment, but convert to zone for date/day strings
   const nowUtc = new Date();
   const nowZoned = toZonedTime(nowUtc, timeZone);
-
-  const dayShort = format(nowZoned, "EEE", { timeZone });      // "Mon", "Tue"...
-  const isoDate = format(nowZoned, "yyyy-MM-dd", { timeZone }); // "YYYY-MM-DD"
+  const dayShort = format(nowZoned, "EEE", { timeZone });
+  const isoDate = format(nowZoned, "yyyy-MM-dd", { timeZone });
 
   const classes = await ClassModel.findAll({
     where: { days: { [Op.contains]: [dayShort] } },
@@ -118,17 +124,12 @@ export const buildTodayClassOccurrences = async (
 
   for (const cls of classes) {
     const plain = cls.get({ plain: true }) as any;
-
-    // ✅ startsAt is a UTC Date that represents the class's local time
     const startsAt = buildStartsAtForDate(isoDate, timeZone, plain.time);
 
-    // ✅ Don’t reset processed_at on upsert; keep it if already processed
-    // Sequelize upsert overwrites fields; leaving processed_at undefined prevents “unprocessing”
     await ClassOccurrenceModel.upsert({
       class_id: plain.id,
       date: isoDate,
       starts_at: startsAt,
-      // processed_at: null,  // ❌ remove this line
       created_at: new Date(),
       updated_at: new Date(),
     } as any);
@@ -138,19 +139,17 @@ export const buildTodayClassOccurrences = async (
     where: { date: isoDate },
     order: [["starts_at", "ASC"]],
   });
-
   return rows.map((r) => toPopulateClassOccurrence(r.get({ plain: true })));
 };
 
 /**
  * Fetch occurrences that are due now (or slightly overdue) and not processed.
- * windowMinutes lets you catch up after restarts.
+ * 🆕 Now filters out cancelled occurrences
  */
 export const fetchDueUnprocessedOccurrences = async (
   timeZone = "America/New_York",
   windowMinutes = 2
 ): Promise<ClassOccurrence[]> => {
-  // ✅ Compare against DB timestamptz using real UTC now
   const nowUtc = new Date();
   const windowStartUtc = new Date(nowUtc.getTime() - windowMinutes * 60 * 1000);
   const isoDate = format(toZonedTime(nowUtc, timeZone), "yyyy-MM-dd", { timeZone });
@@ -158,7 +157,8 @@ export const fetchDueUnprocessedOccurrences = async (
   const rows = await ClassOccurrenceModel.findAll({
     where: {
       processed_at: { [Op.is]: null },
-      date: isoDate, // ✅ keep it constrained to today
+      cancelled_at: { [Op.is]: null }, // 🆕 Skip cancelled occurrences
+      date: isoDate,
       starts_at: {
         [Op.lte]: nowUtc,
         [Op.gte]: windowStartUtc,
@@ -166,7 +166,6 @@ export const fetchDueUnprocessedOccurrences = async (
     },
     order: [["starts_at", "ASC"]],
   });
-
   return rows.map((r) => toPopulateClassOccurrence(r.get({ plain: true })));
 };
 
@@ -176,11 +175,104 @@ export const fetchDueUnprocessedOccurrences = async (
 export const markOccurrenceProcessed = async (occurrenceId: number): Promise<ClassOccurrence> => {
   const row = await ClassOccurrenceModel.findByPk(occurrenceId);
   if (!row) throw new Error(`Class occurrence with id ${occurrenceId} not found`);
-
   await row.update({
     processed_at: new Date(),
     updated_at: new Date(),
   });
-
   return toPopulateClassOccurrence(row.get({ plain: true }));
+};
+
+/**
+ * 🆕 Cancel a class occurrence
+ * - If before class time: marks as cancelled (prevents attendance creation)
+ * - If after class time: marks as cancelled AND deletes any existing attendance
+ */
+export const cancelClassOccurrence = async (occurrenceId: number): Promise<{
+  occurrence: any;
+  deletedAttendanceCount: number;
+}> => {
+  const row = await ClassOccurrenceModel.findByPk(occurrenceId);
+  
+  if (!row) {
+    throw new Error(`Class occurrence ${occurrenceId} not found`);
+  }
+
+  const plain = row.get({ plain: true }) as any;
+  
+  if (plain.cancelled_at) {
+    throw new Error(`Class occurrence ${occurrenceId} is already cancelled`);
+  }
+
+  const now = new Date();
+  const startsAt = new Date(plain.starts_at);
+  const classId = plain.class_id;
+  
+  // Mark as cancelled
+  await row.update({
+    cancelled_at: now,
+    updated_at: now,
+  });
+
+  let deletedCount = 0;
+
+  // If class already started/passed, delete any attendance rows
+  if (now >= startsAt) {
+    console.log(`[cancelClassOccurrence] Class ${classId} already started, deleting attendance...`);
+    
+    try {
+      const attendanceRows = await getAttendanceByClassAndDate(classId, startsAt);
+      
+      console.log(`[cancelClassOccurrence] Found ${attendanceRows.length} attendance rows to delete`);
+      
+      for (const att of attendanceRows) {
+        const attId = att.id || att.getId?.();
+        if (attId) {
+          await removeAttendance(attId);
+          deletedCount++;
+        }
+      }
+      
+      console.log(`[cancelClassOccurrence] Deleted ${deletedCount} attendance rows`);
+    } catch (err) {
+      console.error(`[cancelClassOccurrence] Error deleting attendance:`, err);
+    }
+  } else {
+    console.log(`[cancelClassOccurrence] Class ${classId} hasn't started yet, no attendance to delete`);
+  }
+
+  // Fetch updated row to return
+  const updated = await ClassOccurrenceModel.findByPk(occurrenceId);
+  
+  return {
+    occurrence: updated?.get({ plain: true }),
+    deletedAttendanceCount: deletedCount,
+  };
+};
+
+/**
+ * 🆕 Uncancel a class occurrence (restore it)
+ * Note: Does NOT recreate deleted attendance rows
+ */
+export const uncancelClassOccurrence = async (occurrenceId: number): Promise<any> => {
+  const row = await ClassOccurrenceModel.findByPk(occurrenceId);
+  
+  if (!row) {
+    throw new Error(`Class occurrence ${occurrenceId} not found`);
+  }
+
+  const plain = row.get({ plain: true }) as any;
+  
+  if (!plain.cancelled_at) {
+    throw new Error(`Class occurrence ${occurrenceId} is not cancelled`);
+  }
+
+  await row.update({
+    cancelled_at: null,
+    updated_at: new Date(),
+  });
+
+  console.log(`[uncancelClassOccurrence] Uncancelled occurrence ${occurrenceId}`);
+  
+  const updated = await ClassOccurrenceModel.findByPk(occurrenceId);
+  return updated?.get({ plain: true });
 };
