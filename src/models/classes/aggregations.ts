@@ -8,6 +8,7 @@ export const populateClass = (cls: any): Class => {
     cls.created_at, // first comes created_at
     cls.days,        // then days
     cls.zoom_link, // then zoom_link
-    cls.recordings_folder_link // then recordings_folder_link
+    cls.recordings_folder_link, // then recordings_folder_link
+    cls.type // then type
   );
 };

@@ -4,7 +4,7 @@ import CORE_DB from "../server";
 
 // If you already have validation helpers, use them.
 // Otherwise delete these imports + validate blocks.
-import { validateEmail, } from "../validation";
+import { validateEmail } from "../validation";
 
 class TeacherModel extends Model {}
 
@@ -31,10 +31,14 @@ TeacherModel.init(
       unique: true,
       validate: {
         async isValidEmail(value: string) {
-          // If you don’t have these helpers yet, remove this validate block.
           await validateEmail(value);
         },
       },
+    },
+    side: {
+      type: DataType.ENUM("brothers", "sisters"),
+      allowNull: true, 
+      defaultValue: null,
     },
   },
   {
@@ -51,17 +55,20 @@ export class Teacher {
   public firstName: string;
   public lastName: string;
   public email: string;
+  public side?: "brothers" | "sisters" | null;
 
   constructor(
     id: number,
     firstName: string,
     lastName: string,
     email: string,
+    side?: "brothers" | "sisters" | null
   ) {
     this.id = id;
     this.firstName = firstName;
     this.lastName = lastName;
     this.email = email;
+    this.side = side ?? null;
   }
 
   public getId(): number {
@@ -80,6 +87,9 @@ export class Teacher {
     return this.email;
   }
 
+  public getSide(): "brothers" | "sisters" | null {
+    return this.side ?? null;
+  }
 }
 
 export default TeacherModel;

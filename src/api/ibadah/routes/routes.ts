@@ -9,6 +9,7 @@ import {
   fetchAllIbadahDailyRows,
   tapIbadah,
   fetchTotals,
+  fetchIbadahDailyForClassAndDay
 } from "../../../models/ibadah/functions";
 
 const router = express.Router();
@@ -47,6 +48,59 @@ router.get("/daily/:studentId", async (req: Request, res: Response) => {
     return res.json(row); // can be null
   } catch (err: any) {
     console.error("GET /ibadah/daily/:studentId error", err);
+    return res.status(500).json({ error: err?.message || "Server error" });
+  }
+});
+
+router.get("/class/:classId", async (req: Request, res: Response) => {
+  try {
+    const classId = Number(req.params.classId);
+    if (!Number.isFinite(classId)) {
+      return res.status(400).json({ error: "Invalid classId" });
+    }
+
+    // Florida date (America/New_York) => YYYY-MM-DD
+    const todayDateOnlyEST = () => {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/New_York",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+
+      const yyyy = parts.find((p) => p.type === "year")?.value;
+      const mm = parts.find((p) => p.type === "month")?.value;
+      const dd = parts.find((p) => p.type === "day")?.value;
+
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const dayParam = (req.query.day as string | undefined) ?? todayDateOnlyEST();
+    if (!isValidDateOnly(dayParam)) {
+      return res.status(400).json({ error: "Invalid day format. Use YYYY-MM-DD" });
+    }
+
+    const rows = await fetchIbadahDailyForClassAndDay(classId, dayParam);
+
+    const totals = rows.reduce(
+      (acc, r) => {
+        acc.salawat += r.ibadah?.salawat ?? 0;
+        acc.adhkar += r.ibadah?.adhkar ?? 0;
+        acc.istighfar += r.ibadah?.istighfar ?? 0;
+        return acc;
+      },
+      { salawat: 0, adhkar: 0, istighfar: 0 }
+    );
+
+    return res.json({
+      class_id: classId,
+      day: dayParam,
+      count: rows.length,
+      totals,
+      students: rows,
+    });
+  } catch (err: any) {
+    console.error("GET /ibadah/class/:classId error", err);
     return res.status(500).json({ error: err?.message || "Server error" });
   }
 });

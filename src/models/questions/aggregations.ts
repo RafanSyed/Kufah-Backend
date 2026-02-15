@@ -9,6 +9,7 @@ export const populateQuestion = (q: any): Question => {
     q.isPublic,
     q.classId,
     q.studentId,
-    q.published
+    q.published,
+    q.side
   );
 };

@@ -3,7 +3,7 @@ export interface TeacherRequest {
   firstName: string;
   lastName: string;
   email: string;
-  
+  side?: "brothers" | "sisters" | null; // Optional for creation
 }
 
 export interface Teacher extends TeacherRequest {
@@ -13,4 +13,5 @@ export interface Teacher extends TeacherRequest {
   firstName: string;
   lastName: string;
   email: string;
+  side?: "brothers" | "sisters" | null;
 }

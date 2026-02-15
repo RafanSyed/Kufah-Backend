@@ -11,6 +11,7 @@ export interface QuestionAttributes {
   createdAt?: Date;
   updatedAt?: Date;
   published: boolean
+  side?: "brothers" | "sisters";
 }
 
 export type QuestionCreationAttributes = Optional<
@@ -28,6 +29,7 @@ export interface QuestionRequest {
   classId: number;
   studentId: number;
   published: boolean;
+  side: "brothers" | "sisters";
 }
 
 export interface QuestionFilters {
@@ -35,4 +37,5 @@ export interface QuestionFilters {
   studentId?: number;
   isPublic?: boolean;
   published?:boolean;
+  side?: "brothers" | "sisters";
 }
