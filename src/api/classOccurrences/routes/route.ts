@@ -10,8 +10,9 @@ import {
   buildTodayClassOccurrences,
   fetchDueUnprocessedOccurrences,
   markOccurrenceProcessed,
+  cancelClassOccurrence,      // 🆕 Add this
+  uncancelClassOccurrence,    // 🆕 Add this
 } from "../../../models/classOccurrences/functions";
-
 import { ClassOccurrenceRequest } from "../../../models/classOccurrences/types";
 
 const router = Router();
@@ -37,15 +38,12 @@ router.get("/", async (_req: Request, res: Response) => {
 router.get("/date/:date", async (req: Request, res: Response) => {
   try {
     const dateParam = req.params.date;
-
     if (!dateParam) {
       return res.status(400).json({ message: "date param is required" });
     }
-
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
       return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD." });
     }
-
     const rows = await fetchClassOccurrencesByDate(dateParam);
     return res.json(rows);
   } catch (err) {
@@ -70,11 +68,9 @@ router.get("/due", async (req: Request, res: Response) => {
   try {
     const windowMinutesRaw = req.query.windowMinutes as string | undefined;
     const windowMinutes = windowMinutesRaw ? Number(windowMinutesRaw) : 2;
-
     if (!Number.isFinite(windowMinutes) || windowMinutes <= 0 || windowMinutes > 60) {
       return res.status(400).json({ message: "windowMinutes must be a number between 1 and 60." });
     }
-
     const rows = await fetchDueUnprocessedOccurrences("America/New_York", windowMinutes);
     res.json(rows);
   } catch (err) {
@@ -86,7 +82,6 @@ router.get("/due", async (req: Request, res: Response) => {
 router.post("/", async (req: Request<{}, {}, Partial<ClassOccurrenceRequest>>, res: Response) => {
   try {
     const body = req.body;
-
     if (!body.class_id) {
       return res.status(400).json({ message: "class_id is required" });
     }
@@ -96,7 +91,6 @@ router.post("/", async (req: Request<{}, {}, Partial<ClassOccurrenceRequest>>, r
     if (!body.starts_at) {
       return res.status(400).json({ message: "starts_at is required" });
     }
-
     const created = await createClassOccurrence({
       class_id: Number(body.class_id),
       date: body.date,
@@ -105,7 +99,6 @@ router.post("/", async (req: Request<{}, {}, Partial<ClassOccurrenceRequest>>, r
       created_at: body.created_at ? new Date(body.created_at as any) : new Date(),
       updated_at: body.updated_at ? new Date(body.updated_at as any) : new Date(),
     });
-
     res.status(201).json(created);
   } catch (err) {
     res.status(400).json({ message: (err as Error).message });
@@ -117,11 +110,9 @@ router.post("/", async (req: Request<{}, {}, Partial<ClassOccurrenceRequest>>, r
 router.patch("/:id/mark-processed", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-
     if (!Number.isFinite(id)) {
       return res.status(400).json({ message: "Invalid id" });
     }
-
     const updated = await markOccurrenceProcessed(id);
     res.json(updated);
   } catch (err) {
@@ -129,15 +120,70 @@ router.patch("/:id/mark-processed", async (req: Request, res: Response) => {
   }
 });
 
-// ------------------- GET by id -------------------
-router.get("/:id", async (req: Request, res: Response) => {
+// ------------------- 🆕 POST cancel an occurrence -------------------
+// POST /api/class-occurrences/123/cancel
+router.post("/:id/cancel", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-
     if (!Number.isFinite(id)) {
       return res.status(400).json({ message: "Invalid id" });
     }
 
+    const result = await cancelClassOccurrence(id);
+    
+    res.json({
+      success: true,
+      message: `Class cancelled. ${result.deletedAttendanceCount} attendance row(s) deleted.`,
+      occurrence: result.occurrence,
+      deletedAttendanceCount: result.deletedAttendanceCount,
+    });
+  } catch (err) {
+    const error = err as Error;
+    if (error.message.includes("not found")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("already cancelled")) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ------------------- 🆕 POST uncancel an occurrence -------------------
+// POST /api/class-occurrences/123/uncancel
+router.post("/:id/uncancel", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
+    }
+
+    const occurrence = await uncancelClassOccurrence(id);
+    
+    res.json({
+      success: true,
+      message: "Class restored. Note: Deleted attendance was not recreated.",
+      occurrence,
+    });
+  } catch (err) {
+    const error = err as Error;
+    if (error.message.includes("not found")) {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message.includes("not cancelled")) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ------------------- GET by id -------------------
+router.get("/:id", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
+    }
     const row = await fetchClassOccurrenceById(id);
     res.json(row);
   } catch (err) {
@@ -149,11 +195,9 @@ router.get("/:id", async (req: Request, res: Response) => {
 router.put("/:id", async (req: Request<{ id: string }, {}, Partial<ClassOccurrenceRequest>>, res: Response) => {
   try {
     const id = Number(req.params.id);
-
     if (!Number.isFinite(id)) {
       return res.status(400).json({ message: "Invalid id" });
     }
-
     const updated = await updateClassOccurrence(id, req.body);
     res.json(updated);
   } catch (err) {
@@ -165,11 +209,9 @@ router.put("/:id", async (req: Request<{ id: string }, {}, Partial<ClassOccurren
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-
     if (!Number.isFinite(id)) {
       return res.status(400).json({ message: "Invalid id" });
     }
-
     await deleteClassOccurrence(id);
     res.status(204).send();
   } catch (err) {

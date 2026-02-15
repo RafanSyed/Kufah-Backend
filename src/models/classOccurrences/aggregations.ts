@@ -8,6 +8,7 @@ export function toPopulateClassOccurrence(data: any): ClassOccurrence {
     data.starts_at,
     data.processed_at, 
     data.created_at,
-    data.updated_at
+    data.updated_at,
+    data.cancelled_at
   );
 }

@@ -51,6 +51,12 @@ ClassOccurrenceModel.init(
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
+
+    cancelled_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    }
   },
   {
     sequelize: CORE_DB,
@@ -84,7 +90,8 @@ export class ClassOccurrence {
     starts_at: Date,
     processed_at: Date | null,
     created_at: Date,
-    updated_at: Date
+    updated_at: Date,
+    cancelled_at: Date | null
   ) {
     this.id = id;
     this.class_id = class_id;
@@ -93,6 +100,7 @@ export class ClassOccurrence {
     this.processed_at = processed_at;
     this.created_at = created_at;
     this.updated_at = updated_at;
+    this.cancelled_at = cancelled_at;
   }
 
   public id: number;
@@ -102,6 +110,7 @@ export class ClassOccurrence {
   public processed_at: Date | null;
   public created_at: Date;
   public updated_at: Date;
+  public cancelled_at: Date | null;
 
   public getId(): number { return this.id; }
   public getClassId(): number { return this.class_id; }
@@ -110,6 +119,8 @@ export class ClassOccurrence {
   public getProcessedAt(): Date | null { return this.processed_at; }
   public getCreatedAt(): Date { return this.created_at; }
   public getUpdatedAt(): Date { return this.updated_at; }
+  public getCancelledAt(): Date | null { return this.cancelled_at; }
+
 }
 
 export default ClassOccurrenceModel;
