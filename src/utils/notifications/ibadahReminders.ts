@@ -149,8 +149,8 @@ export const scheduleIbadahReminders = () => {
       })
     );
 
-    const targetHour = 13; // 10 PM
-    const targetMinute = 14;
+    const targetHour = 22; // 10 PM
+    const targetMinute = 0;
 
     // Calculate next run time
     const nextRun = new Date(estTime);
