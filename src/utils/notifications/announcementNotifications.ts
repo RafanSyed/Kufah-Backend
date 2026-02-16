@@ -5,6 +5,8 @@ import StudentClassModel from "../../models/studentClasses/models";
 import StudentModel from "../../models/students/models";
 import ClassModel from "../../models/classes/models";
 import { Op } from "sequelize";
+import TeacherPushTokenModel from "../../models/teacherPushTokens/models";
+import TeacherClassModel from "../../models/teacherClasses/models";
 
 /**
  * Send notification when a class announcement is created
@@ -237,5 +239,73 @@ export const sendPublicQuestionNotification = async (question: {
     console.log(`[sendPublicQuestionNotification] Sent to ${pushTokens.length} students`);
   } catch (err) {
     console.error("[sendPublicQuestionNotification] Error:", err);
+  }
+};
+
+/**
+ * Send notification to teacher when a student submits a question
+ */
+export const sendNewQuestionNotificationToTeacher = async (question: {
+  id: number;
+  student_id: number;
+  class_id: number;
+  question: string;
+}) => {
+  try {
+    console.log("[sendNewQuestionNotificationToTeacher] Sending for question:", question.id);
+
+    // Get the class name
+    const classInfo = await ClassModel.findByPk(question.class_id);
+    const className = classInfo ? classInfo.get({ plain: true }).name : "Class";
+
+    // Get the student name
+    const studentInfo = await StudentModel.findByPk(question.student_id);
+    const studentName = studentInfo
+      ? `${studentInfo.get({ plain: true }).firstName} ${studentInfo.get({ plain: true }).lastName}`
+      : "A student";
+
+    // Get teacher(s) for this class
+    const teacherClasses = await TeacherClassModel.findAll({
+      where: { classId: question.class_id },
+    });
+
+    const teacherIds = teacherClasses.map((tc) => tc.get({ plain: true }).teacherId);
+
+    if (teacherIds.length === 0) {
+      console.log("[sendNewQuestionNotificationToTeacher] No teachers found for class");
+      return;
+    }
+
+    // Get active push tokens for these teachers
+    const tokens = await TeacherPushTokenModel.findAll({
+      where: {
+        teacher_id: { [Op.in]: teacherIds },
+        is_active: true,
+      },
+    });
+
+    const pushTokens = tokens.map((t) => t.get({ plain: true }).push_token);
+
+    if (pushTokens.length === 0) {
+      console.log("[sendNewQuestionNotificationToTeacher] No push tokens found for teachers");
+      return;
+    }
+
+    await sendPushNotifications(
+      pushTokens,
+      `New Question in ${className}`,
+      `${studentName}: ${question.question.substring(0, 80)}${
+        question.question.length > 80 ? "..." : ""
+      }`,
+      {
+        type: "new_question",
+        questionId: question.id,
+        classId: question.class_id,
+      }
+    );
+
+    console.log(`[sendNewQuestionNotificationToTeacher] Sent to ${pushTokens.length} teacher(s)`);
+  } catch (err) {
+    console.error("[sendNewQuestionNotificationToTeacher] Error:", err);
   }
 };
