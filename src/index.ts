@@ -8,6 +8,7 @@ import cors from "cors";
 import cron from "node-cron";
 
 import { runOccurrenceWorker } from "./utils/attendance/occurrenceWorker";
+import { scheduleIbadahReminders } from "./utils/notifications/ibadahReminders";
 
 dotenv.config();
 
@@ -39,6 +40,11 @@ const startServer = async () => {
 
     // ✅ run once on startup
     await runOccurrenceWorker();
+
+    console.log("📱 Scheduling Ibadah reminders...");
+    scheduleIbadahReminders();
+    console.log("✅ Ibadah reminder scheduler initialized");
+    
   } catch (error) {
     console.error("Unable to connect to the database:", error);
     process.exit(1);

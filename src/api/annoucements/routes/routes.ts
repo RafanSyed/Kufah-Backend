@@ -12,6 +12,7 @@ import {
 } from "../../../models/annoucements/functions";
 import { AnnouncementRequest } from "../../../models/annoucements/types";
 import { fetchStudentByQuery } from "../../../models/students/functions";
+import { sendAnnouncementNotification } from "../../../utils/notifications/announcementNotifications";
 
 const router = Router();
 
@@ -130,6 +131,17 @@ router.post("/", async (req: Request<{}, {}, Partial<AnnouncementRequest>>, res:
       target_side: target_side || null,
       title,
       message,
+    });
+
+    // Send notification (fire and forget)
+    sendAnnouncementNotification({
+      id: announcement.id,
+      class_id: announcement.class_id,
+      target_side: announcement.target_side,
+      title: announcement.title,
+      message: announcement.message,
+    }).catch((err: Error) => {
+      console.error("[POST /announcements] Failed to send notification:", err);
     });
 
     res.status(201).json(announcement);
