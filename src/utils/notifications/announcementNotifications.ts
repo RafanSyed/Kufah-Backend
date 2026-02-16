@@ -3,6 +3,7 @@ import { sendPushNotifications } from "./pushNotifications";
 import StudentPushTokenModel from "../../models/studentPushTokens/models";
 import StudentClassModel from "../../models/studentClasses/models";
 import StudentModel from "../../models/students/models";
+import ClassModel from "../../models/classes/models";
 import { Op } from "sequelize";
 
 /**
@@ -52,6 +53,10 @@ export const sendAnnouncementNotification = async (announcement: {
 
     // Case 2: Class-specific announcement
     console.log("[sendAnnouncementNotification] Sending to class:", announcement.class_id);
+
+    // Get the class name
+    const classInfo = await ClassModel.findByPk(announcement.class_id);
+    const className = classInfo ? classInfo.get({ plain: true }).name : "Class";
 
     // Get all students in this class
     const studentClasses = await StudentClassModel.findAll({
@@ -103,9 +108,10 @@ export const sendAnnouncementNotification = async (announcement: {
       return;
     }
 
+    // 🆕 Use class name in notification title
     await sendPushNotifications(
       pushTokens,
-      `Class Announcement${announcement.target_side ? ` (${announcement.target_side})` : ""}`,
+      `${className} Announcement${announcement.target_side ? ` (${announcement.target_side})` : ""}`,
       `${announcement.title}: ${announcement.message.substring(0, 100)}${
         announcement.message.length > 100 ? "..." : ""
       }`,
