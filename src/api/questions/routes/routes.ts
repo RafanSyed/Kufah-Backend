@@ -15,6 +15,10 @@ import {
   fetchStudentByQuery,           // ✅ you already have this (fix return type if needed)
 } from "../../../models/questions/functions"; // 👈 adjust imports to your actual paths
 import { QuestionRequest, QuestionFilters } from "../../../models/questions/types";
+import { 
+  sendQuestionAnsweredNotification, 
+  sendPublicQuestionNotification 
+} from "../../../utils/notifications/announcementNotifications";
 
 const router = Router();
 
@@ -235,22 +239,49 @@ router.post("/", async (req: Request, res: Response) => {
 router.put("/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid question id" });
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ message: "Invalid id" });
+    }
 
-    const updates = req.body as Partial<QuestionRequest>;
+    const { answer, isPublic } = req.body;
+    
+    // 🆕 Get the question BEFORE updating to check current state
+    const existingQuestion = await fetchQuestionById(id); // Use your function name
+    const wasAnswered = existingQuestion.answer != null && existingQuestion.answer !== "";
+    const wasPublic = existingQuestion.isPublic === true;
 
-    // normalize numbers if passed as strings
-    if (typeof (updates as any).classId === "string") (updates as any).classId = Number((updates as any).classId);
-    if (typeof (updates as any).studentId === "string") (updates as any).studentId = Number((updates as any).studentId);
+    // Update the question
+    const updated = await updateQuestion(id, { answer, isPublic }); // Use your function name
 
-    // ✅ block side edits here
-    delete (updates as any).side;
+    // 🆕 Send notification if answer was just added
+    if (!wasAnswered && answer) {
+      sendQuestionAnsweredNotification({
+        id: updated.id,
+        student_id: updated.studentId || updated.studentId, // Handle both formats
+        class_id: updated.classId || updated.classId,       // Handle both formats
+        question: updated.question,
+        answer: updated.answer,
+      }).catch((err) => {
+        console.error("[PUT /questions/:id] Failed to send answered notification:", err);
+      });
+    }
 
-    const updated = await updateQuestion(id, updates);
-    return res.json(updated);
-  } catch (err: any) {
-    console.error("Error updating question:", err);
-    return res.status(500).json({ error: err.message || "Failed to update question" });
+    // 🆕 Send notification if made public (and has answer)
+    if (!wasPublic && isPublic && answer) {
+      sendPublicQuestionNotification({
+        id: updated.id,
+        student_id: updated.studentId || updated.studentId,
+        class_id: updated.classId || updated.classId,
+        question: updated.question,
+        answer: updated.answer,
+      }).catch((err) => {
+        console.error("[PUT /questions/:id] Failed to send public notification:", err);
+      });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    res.status(404).json({ message: (err as Error).message });
   }
 });
 
