@@ -128,12 +128,11 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
  */
 router.get("/email/:email", async (req: Request, res: Response): Promise<void> => {
   try {
-    const email = req.params.email;
+    const email = (req.params.email ?? "").toLowerCase();
     if (!email) {
       res.status(400).json({ success: false, error: "Email parameter is required" });
       return;
     }
-
     const student = await fetchStudentByQuery({ email });
     
     res.status(200).json({
