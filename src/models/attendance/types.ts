@@ -1,6 +1,6 @@
 export interface AttendanceRequest {
   date: Date;
-  status: "Absent" | "In Person" | "Online" | "Recording";
+  status: "Absent" | "In Person" | "Online" | "Recording" | "No Class";
   student_id: number;
   class_id: number;
   token?: string;

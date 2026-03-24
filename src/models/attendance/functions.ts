@@ -27,7 +27,7 @@ export const addAttendance = async (
  */
 export const markAttendanceByToken = async (
   token: string,
-  status: "Absent" | "In Person" | "Online" | "Recording"
+  status: "Absent" | "In Person" | "Online" | "Recording" | "No Class"
 ): Promise<Attendance> => {
   const record = await AttendanceModel.findOne({ where: { token } });
   if (!record) throw new Error("Invalid token");

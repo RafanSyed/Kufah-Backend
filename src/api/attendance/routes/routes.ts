@@ -48,7 +48,7 @@ router.get("/class/:class_id", async (req: Request, res: Response) => {
 router.put(
   "/token/:token",
   async (
-    req: Request<{ token: string }, {}, { status: "Absent" | "In Person" | "Online" | "Recording" }>,
+    req: Request<{ token: string }, {}, { status: "Absent" | "In Person" | "Online" | "Recording" | "No Class" }>,
     res: Response
   ) => {
     const token = req.params.token;

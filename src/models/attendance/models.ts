@@ -6,7 +6,7 @@ import { validateStudent, validateClass } from "../validation";
 export interface AttendanceAttributes {
   id: number;
   date: Date;
-  status: "Absent" | "In Person" | "Online" | "Recording";
+  status: "Absent" | "In Person" | "Online" | "Recording" | "No Class";
   token: string;
   token_expires_at: Date;
   created_at: Date;
@@ -21,7 +21,7 @@ export interface AttendanceAttributes {
 class AttendanceModel extends Model<AttendanceAttributes> implements AttendanceAttributes {
   public id!: number;
   public date!: Date;
-  public status!: "Absent" | "In Person" | "Online" | "Recording";
+  public status!: "Absent" | "In Person" | "Online" | "Recording" | "No Class";
   public token!: string;
   public token_expires_at!: Date;
   public created_at!: Date;
@@ -43,7 +43,7 @@ AttendanceModel.init(
     },
     date: { type: DataTypes.DATE, allowNull: false },
     status: {
-      type: DataTypes.ENUM("Absent", "In Person", "Online", "Recording"),
+      type: DataTypes.ENUM("Absent", "In Person", "Online", "Recording", "No Class"),
       allowNull: false,
     },
     token: { type: DataTypes.STRING, allowNull: false, unique: true },
@@ -83,7 +83,7 @@ export class Attendance {
   constructor(
     public id: number,
     public date: Date,
-    public status: "Absent" | "In Person" | "Online" | "Recording",
+    public status: "Absent" | "In Person" | "Online" | "Recording" | "No Class",
     public token: string,
     public token_expires_at: Date,
     public created_at: Date,
