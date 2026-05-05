@@ -8,6 +8,8 @@ import {
   addStudentsToClass,
   addClassesToStudent,
   updateClassesForStudent,
+  migrateFiqhStudent,
+  migrateTajweedStudent,
 } from "../../../models/studentClasses/functions";
 import { StudentClassRequest, BulkStudentClassRequest } from "../../../models/studentClasses/types";
 
@@ -96,6 +98,39 @@ router.put("/student/:studentId", async (req: Request, res: Response) => {
 
     const updatedClasses = await updateClassesForStudent(studentId, classIds);
     res.status(200).json(updatedClasses);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST: migrate Fiqh student
+router.post("/migrate-fiqh/:studentId", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.studentId);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid studentId" });
+    }
+
+    const result = await migrateFiqhStudent(id);
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/migrate-tajweed/:studentId", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.studentId);
+
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid studentId" });
+    }
+
+    const result = await migrateTajweedStudent(id);
+
+    res.status(200).json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

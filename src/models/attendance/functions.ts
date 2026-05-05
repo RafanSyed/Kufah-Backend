@@ -184,3 +184,19 @@ export const getAttendancesByLink = async (token: string): Promise<Attendance[]>
 
   return records.map(r => populateAttendance(r.get({ plain: true })));
 };
+
+export const fetchLatestAttendanceByStudent = async (
+  student_id: number
+): Promise<Attendance | null> => {
+  const records = await AttendanceModel.findAll({
+    where: { student_id },
+    order: [["date", "DESC"]],
+  });
+
+  const record = records[0];
+  if (!record) {
+    return null;
+  }
+
+  return populateAttendance(record.get({ plain: true }));
+};

@@ -7,6 +7,11 @@ import { addAttendance, fetchAttendanceByStudent } from "../../../models/attenda
 import { sendAttendanceEmail } from "../../../utils/email/sendAttendanceEmail";
 import { fetchAllClasses } from "../../../models/classes/functions";
 import { fetchStudentsInClass } from "../../../models/studentClasses/functions";
+import { fetchLatestAttendanceByStudent } from "../../../models/attendance/functions";
+import { sendFiqhMigrationEmail, sendTajweedMigrationEmail } from "../../../utils/email/sendAttendanceEmail";
+
+const FIQH_CLASS_ID = 24;
+const TAJWEED_CLASS_ID = 28;
 
 const router = Router();
 
@@ -207,5 +212,110 @@ router.post("/resend-email", async (req, res) => {
   }
 });
 
+router.post("/send-fiqh-migration-emails", async (req, res) => {
+  try {
+    const studentsInClass = await fetchStudentsInClass(FIQH_CLASS_ID);
+
+    const results: any[] = [];
+
+    for (const sc of studentsInClass) {
+      try {
+        const student = await fetchStudentByQuery({ id: sc.studentId });
+
+        if (!student) {
+          results.push({ studentId: sc.studentId, sent: false, error: "Student not found" });
+          continue;
+        }
+
+        const attendance = await fetchLatestAttendanceByStudent(sc.studentId);
+
+        if (!attendance?.token) {
+          results.push({
+            studentId: sc.studentId,
+            sent: false,
+            error: "No attendance token found",
+          });
+          continue;
+        }
+
+        await sendFiqhMigrationEmail(
+          student.getEmail(),
+          student.getFirstName(),
+          attendance.token
+        );
+
+        results.push({ studentId: sc.studentId, sent: true });
+      } catch (err: any) {
+        results.push({
+          studentId: sc.studentId,
+          sent: false,
+          error: err.message,
+        });
+      }
+    }
+
+    res.json({
+      message: "Fiqh migration emails processed",
+      total: results.length,
+      results,
+    });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post("/send-tajweed-migration-emails", async (req, res) => {
+  try {
+    const studentsInClass = await fetchStudentsInClass(TAJWEED_CLASS_ID);
+
+    const results: any[] = [];
+
+    for (const sc of studentsInClass) {
+      try {
+        const student = await fetchStudentByQuery({ id: sc.studentId });
+
+        if (!student) {
+          results.push({ studentId: sc.studentId, sent: false, error: "Student not found" });
+          continue;
+        }
+
+        const attendance = await fetchLatestAttendanceByStudent(sc.studentId);
+
+        if (!attendance?.token) {
+          results.push({
+            studentId: sc.studentId,
+            sent: false,
+            error: "No attendance token found",
+          });
+          continue;
+        }
+
+        await sendTajweedMigrationEmail(
+          student.getEmail(),
+          student.getFirstName(),
+          attendance.token
+        );
+
+        results.push({ studentId: sc.studentId, sent: true });
+      } catch (err: any) {
+        results.push({
+          studentId: sc.studentId,
+          sent: false,
+          error: err.message,
+        });
+      }
+    }
+
+    res.json({
+      message: "Tajweed migration emails processed",
+      total: results.length,
+      results,
+    });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+});
 
 export default router;
