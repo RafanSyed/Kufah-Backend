@@ -52,8 +52,8 @@ const startServer = async () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
 
-    // Check every minute
-    cron.schedule("* * * * *", runAttendanceJob);
+    // ⏸️ Paused attendance cron job for now — uncomment to re-enable
+    // cron.schedule("* * * * *", runAttendanceJob);
 
   } catch (error) {
     console.error("Unable to connect to the database:", error);
